@@ -156,7 +156,11 @@ for (const year of years) {
     }
     
     const blockIndex = Math.floor(rowIdx / rowInterval);
-    const currentMonth = blockIndex + 1;
+    let currentMonth = blockIndex + 1;
+    
+    if (year === 2019) {
+      currentMonth = blockIndex + 6;
+    }
     
     if (currentMonth > 12) {
       continue;
