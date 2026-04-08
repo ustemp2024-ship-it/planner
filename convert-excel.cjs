@@ -1,7 +1,7 @@
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const workbook = XLSX.readFile('/home/master/Downloads/Schedule_cleaned.xlsx');
+const workbook = XLSX.readFile('/home/master/Downloads/Schedule.xlsx');
 
 const categoryMap = {
   'Project': { id: 'project', name: 'Project', color: '#3b82f6' },
@@ -47,9 +47,98 @@ for (const year of years) {
   const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
   console.log('Processing', sheetName, '- rows:', data.length);
 
-  const rowInterval = (year >= 2026) ? 8 : 7;
+  if (year === 2025) {
+    let currentMonth = 0;
+    for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
+      const row = data[rowIdx];
+      if (!row) continue;
+      
+      const col0 = row[0] ? String(row[0]).trim() : '';
+      const col1 = row[1] ? String(row[1]).trim() : '';
+      
+      const monthMatch = col0.match(/^(\d{1,2})월$/);
+      if (monthMatch) {
+        currentMonth = parseInt(monthMatch[1]);
+        continue;
+      }
+      
+      if (!col1 || currentMonth === 0) continue;
+      
+      const catInfo = categoryMap[col1];
+      if (!catInfo) {
+        console.log('  Unknown category:', col1, 'at row', rowIdx);
+        continue;
+      }
+      
+      let currentTask = null;
+      for (let day = 1; day <= 31; day++) {
+        const colIdx = day + 6;
+        const cellValue = row[colIdx] ? String(row[colIdx]).trim() : '';
+        
+        if (cellValue) {
+          if (skipPatterns.test(cellValue)) {
+            if (currentTask) {
+              tasks.push(currentTask);
+              currentTask = null;
+            }
+            continue;
+          }
+          
+          const dateStr = year + '-' + String(currentMonth).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+          const cleanedValue = cellValue.replace(/\r\n/g, ' ');
+          const dashIndex = cleanedValue.indexOf('-');
+          const titleText = dashIndex > 0 ? cleanedValue.substring(0, dashIndex).trim() : cleanedValue.trim();
+          
+          if (currentTask && currentTask.title === titleText) {
+            currentTask.endDate = dateStr;
+          } else {
+            if (currentTask) {
+              tasks.push(currentTask);
+            }
+            currentTask = {
+              id: 't' + taskId++,
+              categoryId: catInfo.id,
+              title: titleText,
+              description: cellValue.length > 100 ? cellValue.replace(/\r\n/g, '\n') : undefined,
+              startDate: dateStr,
+              endDate: dateStr,
+              completed: false
+            };
+          }
+        } else {
+          if (currentTask) {
+            tasks.push(currentTask);
+            currentTask = null;
+          }
+        }
+      }
+      
+      if (currentTask) {
+        tasks.push(currentTask);
+      }
+    }
+    continue;
+  }
+  
+  const getSkipRows = (y) => {
+    if (y === 2019) {
+      return new Set([0,1,6,7,12,13,19,20,26,27,33,34,40,41]);
+    } else if (y === 2020) {
+      return new Set([0,1,7,8,14,15,22,23,30,31,38,39,46,47,54,55,62,63,70,71,78,79,86,87]);
+    } else if (y >= 2021 && y <= 2024) {
+      return new Set([0,1,8,9,16,17,24,25,32,33,40,41,48,49,56,57,64,65,72,73,80,81,88,89]);
+    } else if (y === 2026) {
+      return new Set([0,1,9,10,18,19,27,28,36,37,45,46,54,55,63,64,72,73,81,82,90,91,99,100]);
+    }
+    return new Set();
+  };
+  
+  const skipRows = getSkipRows(year);
+  const rowInterval = (year === 2019) ? 6 : (year === 2020) ? 7 : (year >= 2026) ? 9 : 8;
   
   for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
+    if (skipRows.has(rowIdx)) continue;
+    
     const row = data[rowIdx];
     if (!row) continue;
     
@@ -58,6 +147,7 @@ for (const year of years) {
     if (!firstCol) continue;
     
     if (/^\d{1,2}$/.test(firstCol)) continue;
+    if (/^\d{1,2}월$/.test(firstCol)) continue;
     
     const catInfo = categoryMap[firstCol];
     if (!catInfo) {
