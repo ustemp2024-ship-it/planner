@@ -71,7 +71,6 @@ for (const year of years) {
       const monthMatch = col0.match(/^(\d{1,2})월$/);
       if (monthMatch) {
         currentMonth = parseInt(monthMatch[1]);
-        continue;
       }
       
       if (!col1 || currentMonth === 0) continue;
@@ -85,6 +84,82 @@ for (const year of years) {
       let currentTask = null;
       for (let day = 1; day <= 31; day++) {
         const colIdx = day + 6;
+        const cellValue = row[colIdx] ? String(row[colIdx]).trim() : '';
+        
+        if (cellValue) {
+          if (skipPatterns.test(cellValue)) {
+            if (currentTask) {
+              tasks.push(currentTask);
+              currentTask = null;
+            }
+            continue;
+          }
+          
+          const dateStr = year + '-' + String(currentMonth).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+          const cleanedValue = cellValue.replace(/\r\n/g, ' ');
+          const dashIndex = cleanedValue.indexOf('-');
+          const titleText = dashIndex > 0 ? cleanedValue.substring(0, dashIndex).trim() : cleanedValue.trim();
+          
+          if (currentTask && currentTask.title === titleText) {
+            currentTask.endDate = dateStr;
+          } else {
+            if (currentTask) {
+              tasks.push(currentTask);
+            }
+            currentTask = {
+              id: 't' + taskId++,
+              categoryId: catInfo.id,
+              title: titleText,
+              description: cellValue.length > 100 ? cellValue.replace(/\r\n/g, '\n') : undefined,
+              startDate: dateStr,
+              endDate: dateStr,
+              completed: getCellCompleted(sheet, rowIdx, colIdx)
+            };
+          }
+        } else {
+          if (currentTask) {
+            tasks.push(currentTask);
+            currentTask = null;
+          }
+        }
+      }
+      
+      if (currentTask) {
+        tasks.push(currentTask);
+      }
+    }
+    continue;
+  }
+  
+  if (year === 2026) {
+    let currentMonth = 0;
+    for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
+      const row = data[rowIdx];
+      if (!row) continue;
+      
+      const col0 = row[0] ? String(row[0]).trim() : '';
+      const col1 = row[1] ? String(row[1]).trim() : '';
+      
+      const monthMatch = col1.match(/^(\d{1,2})월$/);
+      if (monthMatch) {
+        currentMonth = parseInt(monthMatch[1]);
+        continue;
+      }
+      
+      if (!col0 || currentMonth === 0) continue;
+      if (/^\d{1,2}$/.test(col1)) continue;
+      
+      const catInfo = categoryMap[col0];
+      if (!catInfo) {
+        if (col0 !== '' && !/^\d+$/.test(col0)) {
+          console.log('  Unknown category:', col0, 'at row', rowIdx);
+        }
+        continue;
+      }
+      
+      let currentTask = null;
+      for (let day = 1; day <= 31; day++) {
+        const colIdx = day + 1;
         const cellValue = row[colIdx] ? String(row[colIdx]).trim() : '';
         
         if (cellValue) {
