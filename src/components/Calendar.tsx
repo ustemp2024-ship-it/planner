@@ -1,71 +1,56 @@
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore'
 import { TaskCell } from './TaskCell'
 import { TaskModal } from './TaskModal'
 import type { Task } from '../types'
 
+const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
+
 export function Calendar() {
-  const { categories, tasks, currentMonth, nextMonth, prevMonth } = useStore()
+  const { categories, tasks, currentYear, nextYear, prevYear } = useStore()
   const [taskModal, setTaskModal] = useState<{
     isOpen: boolean
     task?: Task | null
     categoryId?: string
     date?: string
   }>({ isOpen: false })
-  
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const touchStartX = useRef(0)
 
-  const daysInMonth = useMemo(() => {
-    const year = currentMonth.getFullYear()
-    const month = currentMonth.getMonth()
-    const days = new Date(year, month + 1, 0).getDate()
-    return Array.from({ length: days }, (_, i) => {
-      const date = new Date(year, month, i + 1)
-      return {
-        date: date.toISOString().split('T')[0],
-        day: i + 1,
-        dayOfWeek: date.getDay(),
-      }
-    })
-  }, [currentMonth])
+  const sortedCategories = useMemo(() => 
+    [...categories].sort((a, b) => a.order - b.order),
+    [categories]
+  )
 
-  const monthLabel = useMemo(() => {
-    return currentMonth.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
-  }, [currentMonth])
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
+  const getDateString = (month: number, day: number) => {
+    const m = String(month + 1).padStart(2, '0')
+    const d = String(day).padStart(2, '0')
+    return `${currentYear}-${m}-${d}`
   }
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const diff = touchStartX.current - e.changedTouches[0].clientX
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) nextMonth()
-      else prevMonth()
-    }
+  const getDaysInMonth = (month: number) => {
+    return new Date(currentYear, month + 1, 0).getDate()
   }
 
-  const sortedCategories = [...categories].sort((a, b) => a.order - b.order)
+  const isValidDay = (month: number, day: number) => {
+    return day <= getDaysInMonth(month)
+  }
+
+  const todayString = new Date().toISOString().split('T')[0]
 
   return (
-    <div 
-      className="flex-1 overflow-hidden flex flex-col"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="flex-1 overflow-hidden flex flex-col">
       <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <button
-          onClick={prevMonth}
+          onClick={prevYear}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <svg className="w-6 h-6 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h2 className="text-lg font-semibold dark:text-white">{monthLabel}</h2>
+        <h2 className="text-lg font-semibold dark:text-white">{currentYear}년</h2>
         <button
-          onClick={nextMonth}
+          onClick={nextYear}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <svg className="w-6 h-6 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,57 +59,95 @@ export function Calendar() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto" ref={scrollRef}>
+      <div className="flex-1 overflow-auto">
         <div className="min-w-max">
           <div className="flex sticky top-0 z-10 bg-white dark:bg-gray-800">
-            <div className="w-24 flex-shrink-0 p-2 border-r border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900">
-              <span className="text-sm font-medium dark:text-white">카테고리</span>
+            <div className="w-20 flex-shrink-0 p-1 border-r border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900">
+              <span className="text-xs font-medium dark:text-white">월/일</span>
             </div>
-            {daysInMonth.map(({ day, dayOfWeek, date }) => {
-              const isToday = date === new Date().toISOString().split('T')[0]
-              const isSunday = dayOfWeek === 0
-              const isSaturday = dayOfWeek === 6
-              return (
-                <div
-                  key={date}
-                  className={`w-16 flex-shrink-0 p-2 text-center border-r border-b border-gray-200 dark:border-gray-700 
-                    ${isToday ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-50 dark:bg-gray-800'}
-                  `}
-                >
-                  <div className={`text-sm font-medium ${isSunday ? 'text-red-500' : isSaturday ? 'text-blue-500' : 'dark:text-white'}`}>
-                    {day}
-                  </div>
-                  <div className={`text-xs ${isSunday ? 'text-red-400' : isSaturday ? 'text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {['일', '월', '화', '수', '목', '금', '토'][dayOfWeek]}
-                  </div>
-                </div>
-              )
-            })}
+            {DAYS.map((day) => (
+              <div
+                key={day}
+                className="w-10 flex-shrink-0 p-1 text-center border-r border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+              >
+                <span className="text-xs font-medium dark:text-white">{day}</span>
+              </div>
+            ))}
           </div>
 
-          {sortedCategories.map((category) => (
-            <div key={category.id} className="flex">
-              <div 
-                className="w-24 flex-shrink-0 p-2 border-r border-b border-gray-200 dark:border-gray-700 flex items-center"
-                style={{ backgroundColor: `${category.color}33` }}
-              >
-                <div 
-                  className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
-                  style={{ backgroundColor: category.color }}
-                />
-                <span className="text-sm truncate dark:text-white">{category.name}</span>
+          {MONTHS.map((monthName, monthIndex) => (
+            <div key={monthIndex}>
+              <div className="flex bg-gray-100 dark:bg-gray-900 sticky left-0">
+                <div className="w-20 flex-shrink-0 p-1 border-r border-b border-gray-200 dark:border-gray-700 font-semibold">
+                  <span className="text-xs dark:text-white">{monthName}</span>
+                </div>
+                {DAYS.map((day) => {
+                  const isValid = isValidDay(monthIndex, day)
+                  const dateStr = getDateString(monthIndex, day)
+                  const isToday = dateStr === todayString
+                  return (
+                    <div
+                      key={day}
+                      className={`w-10 flex-shrink-0 border-r border-b border-gray-200 dark:border-gray-700 
+                        ${!isValid ? 'bg-gray-200 dark:bg-gray-800' : ''}
+                        ${isToday ? 'bg-blue-100 dark:bg-blue-900' : ''}
+                      `}
+                    />
+                  )
+                })}
               </div>
-              {daysInMonth.map(({ date }) => (
-                <div key={date} className="w-16 flex-shrink-0">
-                  <TaskCell
-                    date={date}
-                    category={category}
-                    tasks={tasks.filter((t) => t.categoryId === category.id)}
-                    onAddTask={(categoryId, d) => setTaskModal({ isOpen: true, categoryId, date: d })}
-                    onEditTask={(task) => setTaskModal({ isOpen: true, task })}
-                  />
+
+              {sortedCategories.map((category) => (
+                <div key={`${monthIndex}-${category.id}`} className="flex">
+                  <div
+                    className="w-20 flex-shrink-0 p-1 border-r border-b border-gray-200 dark:border-gray-700 flex items-center"
+                    style={{ backgroundColor: `${category.color}33` }}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full mr-1 flex-shrink-0"
+                      style={{ backgroundColor: category.color }}
+                    />
+                    <span className="text-xs truncate dark:text-white">{category.name}</span>
+                  </div>
+                  {DAYS.map((day) => {
+                    const isValid = isValidDay(monthIndex, day)
+                    if (!isValid) {
+                      return (
+                        <div
+                          key={day}
+                          className="w-10 flex-shrink-0 border-r border-b border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-800"
+                        />
+                      )
+                    }
+                    const dateStr = getDateString(monthIndex, day)
+                    return (
+                      <div key={day} className="w-10 flex-shrink-0">
+                        <TaskCell
+                          date={dateStr}
+                          category={category}
+                          tasks={tasks.filter((t) => t.categoryId === category.id)}
+                          onAddTask={(categoryId, d) => setTaskModal({ isOpen: true, categoryId, date: d })}
+                          onEditTask={(task) => setTaskModal({ isOpen: true, task })}
+                        />
+                      </div>
+                    )
+                  })}
                 </div>
               ))}
+
+              {sortedCategories.length === 0 && (
+                <div className="flex">
+                  <div className="w-20 flex-shrink-0 p-1 border-r border-b border-gray-200 dark:border-gray-700 text-xs text-gray-400">
+                    -
+                  </div>
+                  {DAYS.map((day) => (
+                    <div
+                      key={day}
+                      className="w-10 flex-shrink-0 border-r border-b border-gray-200 dark:border-gray-700"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 

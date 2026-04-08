@@ -6,7 +6,7 @@ import { PRESET_COLORS } from '../types'
 interface PlannerStore {
   categories: Category[]
   tasks: Task[]
-  currentMonth: Date
+  currentYear: number
 
   addCategory: (name: string) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
@@ -18,9 +18,9 @@ interface PlannerStore {
   deleteTask: (id: string) => void
   toggleTaskComplete: (id: string) => void
 
-  setCurrentMonth: (date: Date) => void
-  nextMonth: () => void
-  prevMonth: () => void
+  setCurrentYear: (year: number) => void
+  nextYear: () => void
+  prevYear: () => void
 
   exportData: () => string
   importData: (json: string) => void
@@ -33,7 +33,7 @@ export const useStore = create<PlannerStore>()(
     (set, get) => ({
       categories: [],
       tasks: [],
-      currentMonth: new Date(),
+      currentYear: new Date().getFullYear(),
 
       addCategory: (name) => {
         const { categories } = get()
@@ -98,22 +98,16 @@ export const useStore = create<PlannerStore>()(
         })
       },
 
-      setCurrentMonth: (date) => {
-        set({ currentMonth: date })
+      setCurrentYear: (year) => {
+        set({ currentYear: year })
       },
 
-      nextMonth: () => {
-        const current = get().currentMonth
-        set({
-          currentMonth: new Date(current.getFullYear(), current.getMonth() + 1, 1),
-        })
+      nextYear: () => {
+        set({ currentYear: get().currentYear + 1 })
       },
 
-      prevMonth: () => {
-        const current = get().currentMonth
-        set({
-          currentMonth: new Date(current.getFullYear(), current.getMonth() - 1, 1),
-        })
+      prevYear: () => {
+        set({ currentYear: get().currentYear - 1 })
       },
 
       exportData: () => {
@@ -137,6 +131,7 @@ export const useStore = create<PlannerStore>()(
       partialize: (state) => ({
         categories: state.categories,
         tasks: state.tasks,
+        currentYear: state.currentYear,
       }),
     }
   )
