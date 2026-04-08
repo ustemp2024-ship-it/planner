@@ -1,7 +1,19 @@
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const workbook = XLSX.readFile('/home/master/Downloads/Schedule.xlsx');
+const workbook = XLSX.readFile('/home/master/Downloads/Schedule.xlsx', { cellStyles: true });
+
+function getCellCompleted(sheet, rowIdx, colIdx) {
+  const cellAddress = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
+  const cell = sheet[cellAddress];
+  if (!cell) return false;
+  
+  const hasFill = cell.s && cell.s.fgColor && cell.s.fgColor.rgb;
+  const hasStrikethrough = cell.s && cell.s.font && cell.s.font.strike;
+  
+  if (hasFill && hasStrikethrough) return false;
+  return !!hasFill;
+}
 
 const categoryMap = {
   'Project': { id: 'project', name: 'Project', color: '#3b82f6' },
@@ -102,7 +114,7 @@ for (const year of years) {
               description: cellValue.length > 100 ? cellValue.replace(/\r\n/g, '\n') : undefined,
               startDate: dateStr,
               endDate: dateStr,
-              completed: false
+              completed: getCellCompleted(sheet, rowIdx, colIdx)
             };
           }
         } else {
@@ -218,7 +230,7 @@ for (const year of years) {
             description: cellValue.length > 100 ? cellValue.replace(/\r\n/g, '\n') : undefined,
             startDate: dateStr,
             endDate: dateStr,
-            completed: false
+            completed: getCellCompleted(sheet, rowIdx, col)
           };
         }
       } else {
