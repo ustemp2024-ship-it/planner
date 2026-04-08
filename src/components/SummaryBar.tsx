@@ -2,16 +2,24 @@ import { useMemo } from 'react'
 import { useStore } from '../store/useStore'
 
 export function SummaryBar() {
-  const { tasks, categories } = useStore()
+  const { tasks, categories, currentYear } = useStore()
 
   const stats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
+    const now = new Date()
+    const isCurrentYear = currentYear === now.getFullYear()
+    
+    const todayMonth = now.getMonth() + 1
+    const todayDay = now.getDate()
+    
+    const today = isCurrentYear 
+      ? now.toISOString().split('T')[0]
+      : `${currentYear}-${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`
+    
+    const weekAgo = new Date(currentYear, todayMonth - 1, todayDay - 7)
     const weekAgoStr = weekAgo.toISOString().split('T')[0]
     
-    const monthStart = today.substring(0, 7) + '-01'
-    const monthEnd = today.substring(0, 7) + '-31'
+    const monthStart = `${currentYear}-${String(todayMonth).padStart(2, '0')}-01`
+    const monthEnd = `${currentYear}-${String(todayMonth).padStart(2, '0')}-31`
 
     const todayTasks = tasks.filter(t => t.startDate <= today && t.endDate >= today)
     const todayCompleted = todayTasks.filter(t => t.completed).length
@@ -28,7 +36,7 @@ export function SummaryBar() {
     const monthRate = monthTotal > 0 ? Math.round((monthCompleted / monthTotal) * 100) : 0
 
     let streak = 0
-    const date = new Date(today)
+    const date = new Date(currentYear, todayMonth - 1, todayDay)
     const completedDates = new Set(
       tasks.filter(t => t.completed).map(t => t.endDate)
     )
@@ -45,9 +53,10 @@ export function SummaryBar() {
       weekRate,
       monthRate,
       streak,
-      overdue
+      overdue,
+      isCurrentYear
     }
-  }, [tasks])
+  }, [tasks, currentYear])
 
   if (categories.length === 0) return null
 
