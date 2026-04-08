@@ -3,13 +3,16 @@ import { Calendar } from './components/Calendar'
 import { CategoryManager } from './components/CategoryManager'
 import { StatsPanel } from './components/StatsPanel'
 import { ReminderChecker } from './components/ReminderChecker'
+import { SummaryBar } from './components/SummaryBar'
+import { CategoryFilter } from './components/CategoryFilter'
 import { useStore } from './store/useStore'
 
 function App() {
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const { exportData, importData, loadDefaultData, tasks, categories } = useStore()
+  const [showFilter, setShowFilter] = useState(false)
+  const { exportData, importData, loadDefaultData, tasks, categories, hiddenCategories } = useStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -78,6 +81,21 @@ function App() {
           </button>
           
           <button
+            onClick={() => setShowFilter(true)}
+            className="relative p-2.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-md border border-slate-200/50 dark:border-slate-700/50 active:scale-95"
+            title="필터"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            {hiddenCategories.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {hiddenCategories.length}
+              </span>
+            )}
+          </button>
+          
+          <button
             onClick={() => setShowCategoryManager(true)}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-md border border-slate-200/50 dark:border-slate-700/50 active:scale-95"
             title="카테고리"
@@ -133,6 +151,8 @@ function App() {
         />
       </header>
 
+      <SummaryBar />
+
       <Calendar />
 
       <CategoryManager
@@ -143,6 +163,11 @@ function App() {
       <StatsPanel
         isOpen={showStats}
         onClose={() => setShowStats(false)}
+      />
+
+      <CategoryFilter
+        isOpen={showFilter}
+        onClose={() => setShowFilter(false)}
       />
 
       <ReminderChecker />

@@ -7,6 +7,7 @@ interface PlannerStore {
   categories: Category[]
   tasks: Task[]
   currentYear: number
+  hiddenCategories: string[]
 
   addCategory: (name: string) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
@@ -22,6 +23,9 @@ interface PlannerStore {
   nextYear: () => void
   prevYear: () => void
 
+  toggleCategoryVisibility: (id: string) => void
+  showAllCategories: () => void
+
   exportData: () => string
   importData: (json: string) => void
   loadDefaultData: () => Promise<void>
@@ -35,6 +39,7 @@ export const useStore = create<PlannerStore>()(
       categories: [],
       tasks: [],
       currentYear: new Date().getFullYear(),
+      hiddenCategories: [],
 
       addCategory: (name) => {
         const { categories } = get()
@@ -111,6 +116,19 @@ export const useStore = create<PlannerStore>()(
         set({ currentYear: get().currentYear - 1 })
       },
 
+      toggleCategoryVisibility: (id) => {
+        const { hiddenCategories } = get()
+        if (hiddenCategories.includes(id)) {
+          set({ hiddenCategories: hiddenCategories.filter(c => c !== id) })
+        } else {
+          set({ hiddenCategories: [...hiddenCategories, id] })
+        }
+      },
+
+      showAllCategories: () => {
+        set({ hiddenCategories: [] })
+      },
+
       exportData: () => {
         const { categories, tasks } = get()
         return JSON.stringify({ categories, tasks }, null, 2)
@@ -147,6 +165,7 @@ export const useStore = create<PlannerStore>()(
         categories: state.categories,
         tasks: state.tasks,
         currentYear: state.currentYear,
+        hiddenCategories: state.hiddenCategories,
       }),
     }
   )

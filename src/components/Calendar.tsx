@@ -8,7 +8,7 @@ const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 
 export function Calendar() {
-  const { categories, tasks, currentYear, nextYear, prevYear } = useStore()
+  const { categories, tasks, currentYear, nextYear, prevYear, hiddenCategories } = useStore()
   const [taskModal, setTaskModal] = useState<{
     isOpen: boolean
     task?: Task | null
@@ -17,8 +17,10 @@ export function Calendar() {
   }>({ isOpen: false })
 
   const sortedCategories = useMemo(() => 
-    [...categories].sort((a, b) => a.order - b.order),
-    [categories]
+    [...categories]
+      .filter(c => !hiddenCategories.includes(c.id))
+      .sort((a, b) => a.order - b.order),
+    [categories, hiddenCategories]
   )
 
   const getDateString = (month: number, day: number) => {

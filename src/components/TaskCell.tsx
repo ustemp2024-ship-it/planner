@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import type { Task, Category } from '../types'
 import { useStore } from '../store/useStore'
 
@@ -11,6 +12,9 @@ interface TaskCellProps {
 
 export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskCellProps) {
   const { toggleTaskComplete } = useStore()
+  const [showTooltip, setShowTooltip] = useState(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isLongPress, setIsLongPress] = useState(false)
 
   const cellTasks = tasks.filter((t) => {
     const start = new Date(t.startDate)
@@ -20,33 +24,64 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
   })
 
   const handleClick = () => {
+    if (isLongPress) {
+      setIsLongPress(false)
+      return
+    }
     if (cellTasks.length === 0) {
       onAddTask(category.id, date)
     }
   }
 
+  const handleTouchStart = (task: Task) => {
+    longPressTimer.current = setTimeout(() => {
+      setIsLongPress(true)
+      toggleTaskComplete(task.id)
+    }, 500)
+  }
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
   return (
     <div
-      className="min-h-[24px] h-6 border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-center"
+      className="min-h-[24px] h-6 border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-center relative"
       onClick={handleClick}
     >
       {cellTasks.map((task) => {
         const isStart = task.startDate === date
+        const isEnd = task.endDate === date
+        const isSingleDay = task.startDate === task.endDate
 
         return (
           <div
             key={task.id}
             onClick={(e) => {
               e.stopPropagation()
+              if (isLongPress) {
+                setIsLongPress(false)
+                return
+              }
               if (isStart) {
                 onEditTask(task)
               } else {
                 toggleTaskComplete(task.id)
               }
             }}
+            onTouchStart={() => handleTouchStart(task)}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
             className={`
               w-full h-full flex items-center justify-center cursor-pointer transition-all relative group
               ${task.completed ? 'shadow-inner' : 'hover:brightness-95'}
+              ${isStart && !isSingleDay ? 'rounded-l-sm' : ''}
+              ${isEnd && !isSingleDay ? 'rounded-r-sm' : ''}
             `}
             style={{
               backgroundColor: task.completed 
@@ -62,8 +97,36 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
                 </svg>
               </div>
             )}
-            {!task.completed && (
+            {!task.completed && isStart && (
+              <span 
+                className="text-[8px] font-bold text-white/90 truncate px-0.5 drop-shadow-sm"
+                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+              >
+                {task.title.charAt(0)}
+              </span>
+            )}
+            {!task.completed && !isStart && (
               <div className="w-2 h-2 rounded-full bg-white/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+
+            {showTooltip && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 pointer-events-none">
+                <div className="bg-slate-900 dark:bg-slate-700 text-white text-xs px-2 py-1.5 rounded-lg shadow-xl whitespace-nowrap max-w-[200px] truncate">
+                  <div className="font-semibold">{task.title}</div>
+                  {task.description && (
+                    <div className="text-slate-300 text-[10px] truncate">{task.description}</div>
+                  )}
+                  <div className="text-slate-400 text-[10px] mt-0.5">
+                    {task.startDate === task.endDate 
+                      ? task.startDate 
+                      : `${task.startDate} ~ ${task.endDate}`}
+                  </div>
+                  {task.completed && (
+                    <div className="text-emerald-400 text-[10px] font-medium">완료됨</div>
+                  )}
+                </div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-700" />
+              </div>
             )}
           </div>
         )
