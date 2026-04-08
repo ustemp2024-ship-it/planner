@@ -3,19 +3,19 @@
     {
       "id": "project",
       "name": "Project",
-      "color": "#3b82f6",
+      "color": "#fbbf24",
       "order": 0
     },
     {
       "id": "studium",
       "name": "Studium",
-      "color": "#22c55e",
+      "color": "#84cc16",
       "order": 1
     },
     {
       "id": "paper",
       "name": "Paper",
-      "color": "#f97316",
+      "color": "#22c55e",
       "order": 2
     },
     {
@@ -27,19 +27,19 @@
     {
       "id": "entertainment",
       "name": "Entertainment",
-      "color": "#ec4899",
+      "color": "#3b82f6",
       "order": 4
     },
     {
       "id": "note",
       "name": "Note",
-      "color": "#fbbf24",
+      "color": "#6366f1",
       "order": 5
     },
     {
       "id": "special",
       "name": "Special",
-      "color": "#ef4444",
+      "color": "#ec4899",
       "order": 6
     }
   ],

@@ -16,31 +16,31 @@ function getCellCompleted(sheet, rowIdx, colIdx) {
 }
 
 const categoryMap = {
-  'Project': { id: 'project', name: 'Project', color: '#3b82f6' },
-  'MDL_Project': { id: 'project', name: 'Project', color: '#3b82f6' },
-  'Studium': { id: 'studium', name: 'Studium', color: '#22c55e' },
-  '독일어 스터디': { id: 'studium', name: 'Studium', color: '#22c55e' },
-  'Paper': { id: 'paper', name: 'Paper', color: '#f97316' },
-  '특허 유니버시아드': { id: 'paper', name: 'Paper', color: '#f97316' },
+  'Project': { id: 'project', name: 'Project', color: '#fbbf24' },
+  'MDL_Project': { id: 'project', name: 'Project', color: '#fbbf24' },
+  'Studium': { id: 'studium', name: 'Studium', color: '#84cc16' },
+  '독일어 스터디': { id: 'studium', name: 'Studium', color: '#84cc16' },
+  'Paper': { id: 'paper', name: 'Paper', color: '#22c55e' },
+  '특허 유니버시아드': { id: 'paper', name: 'Paper', color: '#22c55e' },
   'Univ': { id: 'univ', name: 'Univ', color: '#8b5cf6' },
   '학교 과목': { id: 'univ', name: 'Univ', color: '#8b5cf6' },
-  'Entertainment': { id: 'entertainment', name: 'Entertainment', color: '#ec4899' },
-  'Reise': { id: 'entertainment', name: 'Entertainment', color: '#ec4899' },
-  'Note': { id: 'note', name: 'Note', color: '#fbbf24' },
-  'Producing': { id: 'note', name: 'Note', color: '#fbbf24' },
-  'Special': { id: 'special', name: 'Special', color: '#ef4444' }
+  'Entertainment': { id: 'entertainment', name: 'Entertainment', color: '#3b82f6' },
+  'Reise': { id: 'entertainment', name: 'Entertainment', color: '#3b82f6' },
+  'Note': { id: 'note', name: 'Note', color: '#6366f1' },
+  'Producing': { id: 'note', name: 'Note', color: '#6366f1' },
+  'Special': { id: 'special', name: 'Special', color: '#ec4899' }
 };
 
 const skipPatterns = /^(1월|2월|3월|4월|5월|6월|7월|8월|9월|10월|11월|12월|\d{1,2})$/;
 
 const categories = [
-  { id: 'project', name: 'Project', color: '#3b82f6', order: 0 },
-  { id: 'studium', name: 'Studium', color: '#22c55e', order: 1 },
-  { id: 'paper', name: 'Paper', color: '#f97316', order: 2 },
+  { id: 'project', name: 'Project', color: '#fbbf24', order: 0 },
+  { id: 'studium', name: 'Studium', color: '#84cc16', order: 1 },
+  { id: 'paper', name: 'Paper', color: '#22c55e', order: 2 },
   { id: 'univ', name: 'Univ', color: '#8b5cf6', order: 3 },
-  { id: 'entertainment', name: 'Entertainment', color: '#ec4899', order: 4 },
-  { id: 'note', name: 'Note', color: '#fbbf24', order: 5 },
-  { id: 'special', name: 'Special', color: '#ef4444', order: 6 }
+  { id: 'entertainment', name: 'Entertainment', color: '#3b82f6', order: 4 },
+  { id: 'note', name: 'Note', color: '#6366f1', order: 5 },
+  { id: 'special', name: 'Special', color: '#ec4899', order: 6 }
 ];
 
 const tasks = [];
