@@ -15,28 +15,36 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
   const [step, setStep] = useState<'category' | 'task'>('category')
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [reminderDate, setReminderDate] = useState('')
 
   useEffect(() => {
     if (task) {
       setStep('task')
       setSelectedCategoryId(task.categoryId)
       setTitle(task.title)
+      setDescription(task.description || '')
       setStartDate(task.startDate)
       setEndDate(task.endDate)
+      setReminderDate(task.reminderDate || '')
     } else if (initialCategoryId) {
       setStep('task')
       setSelectedCategoryId(initialCategoryId)
       setTitle('')
+      setDescription('')
       setStartDate(initialDate || '')
       setEndDate(initialDate || '')
+      setReminderDate('')
     } else if (initialDate) {
       setStep('category')
       setSelectedCategoryId('')
       setTitle('')
+      setDescription('')
       setStartDate(initialDate)
       setEndDate(initialDate)
+      setReminderDate('')
     }
   }, [task, initialCategoryId, initialDate, isOpen])
 
@@ -56,14 +64,23 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
     if (!title.trim() || !selectedCategoryId) return
 
     if (task) {
-      updateTask(task.id, { title, startDate, endDate, categoryId: selectedCategoryId })
+      updateTask(task.id, { 
+        title, 
+        description: description || undefined,
+        startDate, 
+        endDate, 
+        categoryId: selectedCategoryId,
+        reminderDate: reminderDate || undefined
+      })
     } else {
       addTask({
         categoryId: selectedCategoryId,
         title,
+        description: description || undefined,
         startDate,
         endDate,
         completed: false,
+        reminderDate: reminderDate || undefined
       })
     }
     handleClose()
@@ -80,6 +97,8 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
     setStep('category')
     setSelectedCategoryId('')
     setTitle('')
+    setDescription('')
+    setReminderDate('')
     onClose()
   }
 
@@ -87,12 +106,12 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
 
   if (step === 'category' && !task) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm p-4 shadow-xl">
-          <h2 className="text-lg font-semibold mb-4 dark:text-white">카테고리 선택</h2>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl border border-gray-100 dark:border-gray-700">
+          <h2 className="text-xl font-bold mb-5 dark:text-white">카테고리 선택</h2>
           <div className="space-y-2 max-h-60 overflow-y-auto">
             {categories.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+              <p className="text-gray-500 dark:text-gray-400 text-center py-6">
                 카테고리를 먼저 추가해주세요
               </p>
             ) : (
@@ -102,20 +121,20 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
                   <button
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat.id)}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
                   >
                     <div
-                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm"
                       style={{ backgroundColor: cat.color }}
                     />
-                    <span className="dark:text-white">{cat.name}</span>
+                    <span className="dark:text-white font-medium">{cat.name}</span>
                   </button>
                 ))
             )}
           </div>
           <button
             onClick={handleClose}
-            className="w-full mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg dark:text-white"
+            className="w-full mt-5 px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             취소
           </button>
@@ -125,66 +144,86 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm p-4 shadow-xl">
-        <div className="flex items-center gap-2 mb-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl border border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-5">
           {!task && (
             <button
               onClick={handleBack}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
           )}
-          <h2 className="text-lg font-semibold dark:text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold dark:text-white flex items-center gap-2">
             {task ? '할 일 수정' : '새 할 일'}
             {selectedCategory && (
               <span
-                className="text-sm px-2 py-1 rounded"
-                style={{ backgroundColor: `${selectedCategory.color}33`, color: selectedCategory.color }}
+                className="text-sm px-3 py-1 rounded-full font-medium"
+                style={{ backgroundColor: `${selectedCategory.color}20`, color: selectedCategory.color }}
               >
                 {selectedCategory.name}
               </span>
             )}
           </h2>
         </div>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="할 일 입력"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-3 bg-white dark:bg-gray-700 dark:text-white"
-            autoFocus
-          />
-          <div className="flex gap-2 mb-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="할 일 제목"
+              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              autoFocus
+            />
+          </div>
+          <div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="상세 메모 (선택사항)"
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-sm text-gray-600 dark:text-gray-400">시작일</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">시작일</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div className="flex-1">
-              <label className="text-sm text-gray-600 dark:text-gray-400">종료일</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">종료일</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
-          <div className="flex gap-2">
+          <div>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">알림 날짜 (선택)</label>
+            <input
+              type="date"
+              value={reminderDate}
+              onChange={(e) => setReminderDate(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
             {task && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg"
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
               >
                 삭제
               </button>
@@ -192,13 +231,13 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg dark:text-white"
+              className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               취소
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg"
+              className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/25"
             >
               저장
             </button>

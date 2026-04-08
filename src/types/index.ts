@@ -9,9 +9,11 @@ export interface Task {
   id: string
   categoryId: string
   title: string
+  description?: string
   startDate: string
   endDate: string
   completed: boolean
+  reminderDate?: string
 }
 
 export const PRESET_COLORS = [
