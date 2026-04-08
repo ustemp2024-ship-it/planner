@@ -16,7 +16,7 @@ function App() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
   const [draggedTask, setDraggedTask] = useState<string | null>(null)
-  const { exportData, importData, loadDefaultData, tasks, categories, hiddenCategories } = useStore()
+  const { exportData, importData, loadDefaultData, tasks, categories, hiddenCategories, markAllTasksComplete } = useStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const toggleTaskSelection = useCallback((taskId: string) => {
@@ -164,6 +164,17 @@ function App() {
                     </svg>
                   </div>
                   데이터 가져오기
+                </button>
+                <button
+                  onClick={() => { markAllTasksComplete(); setShowMenu(false) }}
+                  className="w-full px-4 py-3.5 text-left text-sm hover:bg-white/50 dark:hover:bg-slate-700/50 dark:text-white flex items-center gap-3 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  모두 완료 처리
                 </button>
                 <button
                   onClick={() => { setSelectionMode(true); setShowMenu(false) }}

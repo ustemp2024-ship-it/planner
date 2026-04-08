@@ -20,6 +20,7 @@ interface PlannerStore {
   deleteTasks: (ids: string[]) => void
   copyTask: (id: string, newStartDate: string, newEndDate: string) => void
   toggleTaskComplete: (id: string) => void
+  markAllTasksComplete: () => void
 
   setCurrentYear: (year: number) => void
   nextYear: () => void
@@ -125,6 +126,12 @@ export const useStore = create<PlannerStore>()(
           tasks: get().tasks.map((t) =>
             t.id === id ? { ...t, completed: !t.completed } : t
           ),
+        })
+      },
+
+      markAllTasksComplete: () => {
+        set({
+          tasks: get().tasks.map((t) => ({ ...t, completed: true })),
         })
       },
 
