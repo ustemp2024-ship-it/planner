@@ -68,6 +68,15 @@ for (const year of years) {
         const cellValue = data[rowIdx] && data[rowIdx][colIdx] ? String(data[rowIdx][colIdx]).trim() : '';
         
         if (cellValue) {
+          const skipPatterns = /^(1월|2월|3월|4월|5월|6월|7월|8월|9월|10월|11월|12월|\d{1,2})$/;
+          if (skipPatterns.test(cellValue)) {
+            if (currentTask) {
+              tasks.push(currentTask);
+              currentTask = null;
+            }
+            continue;
+          }
+          
           const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
           const cleanedValue = cellValue.replace(/\r\n/g, ' ');
           const dashIndex = cleanedValue.indexOf('-');
