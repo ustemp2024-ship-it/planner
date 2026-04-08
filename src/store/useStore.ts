@@ -18,6 +18,7 @@ interface PlannerStore {
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   deleteTasks: (ids: string[]) => void
+  copyTask: (id: string, newStartDate: string, newEndDate: string) => void
   toggleTaskComplete: (id: string) => void
 
   setCurrentYear: (year: number) => void
@@ -102,6 +103,21 @@ export const useStore = create<PlannerStore>()(
         set({
           tasks: get().tasks.filter((t) => !idSet.has(t.id)),
         })
+      },
+
+      copyTask: (id, newStartDate, newEndDate) => {
+        const task = get().tasks.find((t) => t.id === id)
+        if (task) {
+          set({
+            tasks: [...get().tasks, {
+              ...task,
+              id: generateId(),
+              startDate: newStartDate,
+              endDate: newEndDate,
+              completed: false,
+            }],
+          })
+        }
       },
 
       toggleTaskComplete: (id) => {

@@ -11,14 +11,16 @@ interface TaskModalProps {
 }
 
 export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId, initialDate }: TaskModalProps) {
-  const { categories, addTask, updateTask, deleteTask, toggleTaskComplete } = useStore()
-  const [step, setStep] = useState<'category' | 'task'>('category')
+  const { categories, addTask, updateTask, deleteTask, toggleTaskComplete, copyTask } = useStore()
+  const [step, setStep] = useState<'category' | 'task' | 'copy'>('category')
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reminderDate, setReminderDate] = useState('')
+  const [copyStartDate, setCopyStartDate] = useState('')
+  const [copyEndDate, setCopyEndDate] = useState('')
 
   useEffect(() => {
     if (task) {
@@ -96,6 +98,21 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
   const handleToggleComplete = () => {
     if (task) {
       toggleTaskComplete(task.id)
+      handleClose()
+    }
+  }
+
+  const handleCopyTask = () => {
+    if (task) {
+      setCopyStartDate(task.startDate)
+      setCopyEndDate(task.endDate)
+      setStep('copy')
+    }
+  }
+
+  const handleConfirmCopy = () => {
+    if (task && copyStartDate && copyEndDate) {
+      copyTask(task.id, copyStartDate, copyEndDate)
       handleClose()
     }
   }
@@ -207,20 +224,71 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
               )}
             </div>
             {task && (
-              <button
-                onClick={handleToggleComplete}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  task.completed 
-                    ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400' 
-                    : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {task.completed ? '미완료로' : '완료하기'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopyTask}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400"
+                >
+                  복사
+                </button>
+                <button
+                  onClick={handleToggleComplete}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    task.completed 
+                      ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400' 
+                      : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400'
+                  }`}
+                >
+                  {task.completed ? '미완료' : '완료'}
+                </button>
+              </div>
             )}
           </div>
         </div>
 
+        {step === 'copy' && task ? (
+          <div className="p-5 space-y-4">
+            <div className="text-sm text-slate-600 dark:text-slate-300">
+              <span className="font-medium">"{task.title}"</span>을(를) 다른 날짜에 복사합니다.
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">시작일</label>
+                <input
+                  type="date"
+                  value={copyStartDate}
+                  onChange={(e) => setCopyStartDate(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">종료일</label>
+                <input
+                  type="date"
+                  value={copyEndDate}
+                  onChange={(e) => setCopyEndDate(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setStep('task')}
+                className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-700 dark:text-white font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-[0.98]"
+              >
+                뒤로
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCopy}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-600 transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98]"
+              >
+                복사하기
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <input
@@ -302,6 +370,7 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   )
