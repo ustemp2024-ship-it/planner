@@ -134,7 +134,24 @@ for (const year of years) {
   };
   
   const skipRows = getSkipRows(year);
-  const rowInterval = (year === 2019) ? 6 : (year === 2020) ? 7 : (year >= 2026) ? 9 : 8;
+  
+  const monthStartRows = [];
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (row && row[0] && /^\d{1,2}월$/.test(String(row[0]).trim())) {
+      const monthNum = parseInt(String(row[0]).match(/(\d+)/)[1]);
+      monthStartRows.push({ row: i, month: monthNum });
+    }
+  }
+  
+  const getMonthForRow = (rowIdx) => {
+    for (let i = monthStartRows.length - 1; i >= 0; i--) {
+      if (rowIdx >= monthStartRows[i].row) {
+        return monthStartRows[i].month;
+      }
+    }
+    return 0;
+  };
   
   for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
     if (skipRows.has(rowIdx)) continue;
@@ -155,14 +172,13 @@ for (const year of years) {
       continue;
     }
     
-    const blockIndex = Math.floor(rowIdx / rowInterval);
-    let currentMonth = blockIndex + 1;
+    let currentMonth = getMonthForRow(rowIdx);
     
-    if (year === 2019) {
-      currentMonth = blockIndex + 6;
+    if (year === 2019 && currentMonth === 0) {
+      currentMonth = 6;
     }
     
-    if (currentMonth > 12) {
+    if (currentMonth <= 0 || currentMonth > 12) {
       continue;
     }
     
