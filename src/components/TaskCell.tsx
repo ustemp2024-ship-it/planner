@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, memo, useMemo } from 'react'
 import type { Task, Category } from '../types'
 import { useStore } from '../store/useStore'
+import { formatDateRange } from '../utils/dateUtils'
 
 interface TaskCellProps {
   date: string
@@ -10,18 +11,15 @@ interface TaskCellProps {
   onEditTask: (task: Task) => void
 }
 
-export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskCellProps) {
+export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskCellProps) {
   const { toggleTaskComplete } = useStore()
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLongPress, setIsLongPress] = useState(false)
 
-  const cellTasks = tasks.filter((t) => {
-    const start = new Date(t.startDate)
-    const end = new Date(t.endDate)
-    const current = new Date(date)
-    return current >= start && current <= end
-  })
+  const cellTasks = useMemo(() => tasks.filter((t) => {
+    return t.startDate <= date && t.endDate >= date
+  }), [tasks, date])
 
   const handleClick = () => {
     if (isLongPress) {
@@ -129,9 +127,7 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
                     <div className="text-slate-300 text-[10px] truncate">{task.description}</div>
                   )}
                   <div className="text-slate-400 text-[10px] mt-0.5">
-                    {task.startDate === task.endDate 
-                      ? task.startDate 
-                      : `${task.startDate} ~ ${task.endDate}`}
+                    {formatDateRange(task.startDate, task.endDate)}
                   </div>
                   {task.completed && (
                     <div className="text-emerald-400 text-[10px] font-medium">완료됨</div>
@@ -145,4 +141,4 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
       })}
     </div>
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Calendar } from './components/Calendar'
 import { CategoryManager } from './components/CategoryManager'
 import { StatsPanel } from './components/StatsPanel'
@@ -19,11 +19,13 @@ function App() {
     loadDefaultData()
   }, [])
 
-  const completedCount = tasks.filter(t => t.completed).length
-  const totalCount = tasks.length
-  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+  const completionRate = useMemo(() => {
+    const completedCount = tasks.filter(t => t.completed).length
+    const totalCount = tasks.length
+    return totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+  }, [tasks])
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     const data = exportData()
     const blob = new Blob([data], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -33,9 +35,9 @@ function App() {
     a.click()
     URL.revokeObjectURL(url)
     setShowMenu(false)
-  }
+  }, [exportData])
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
@@ -46,7 +48,7 @@ function App() {
       reader.readAsText(file)
     }
     setShowMenu(false)
-  }
+  }, [importData])
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
@@ -64,7 +66,7 @@ function App() {
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <span>{categories.length} 카테고리</span>
               <span>•</span>
-              <span>{totalCount} 할일</span>
+              <span>{tasks.length} 할일</span>
             </div>
           </div>
         </div>
