@@ -23,6 +23,23 @@ export function Calendar() {
     [categories, hiddenCategories]
   )
 
+  const getCategoriesForMonth = useMemo(() => {
+    const monthCategories: Record<number, string[]> = {}
+    for (let month = 0; month < 12; month++) {
+      const monthStr = String(month + 1).padStart(2, '0')
+      const prefix = `${currentYear}-${monthStr}-`
+      const categoryIds = new Set<string>()
+      tasks.forEach(t => {
+        if (t.startDate.startsWith(prefix) || t.endDate.startsWith(prefix) ||
+            (t.startDate < prefix && t.endDate >= prefix)) {
+          categoryIds.add(t.categoryId)
+        }
+      })
+      monthCategories[month] = Array.from(categoryIds)
+    }
+    return monthCategories
+  }, [tasks, currentYear])
+
   const getDateString = (month: number, day: number) => {
     const m = String(month + 1).padStart(2, '0')
     const d = String(day).padStart(2, '0')
@@ -117,7 +134,9 @@ export function Calendar() {
                 })}
               </div>
 
-              {sortedCategories.map((category) => (
+              {sortedCategories
+                .filter(c => getCategoriesForMonth[monthIndex]?.includes(c.id))
+                .map((category) => (
                 <div key={`${monthIndex}-${category.id}`} className="flex">
                   <div
                     className="w-24 flex-shrink-0 px-2 py-0.5 border-r border-b border-slate-200/50 dark:border-slate-700/50 flex items-center gap-1.5 transition-colors"
@@ -155,7 +174,7 @@ export function Calendar() {
                 </div>
               ))}
 
-              {sortedCategories.length === 0 && (
+              {(!getCategoriesForMonth[monthIndex] || getCategoriesForMonth[monthIndex].length === 0) && (
                 <div className="flex">
                   <div className="w-24 flex-shrink-0 p-1 border-r border-b border-slate-200/50 dark:border-slate-700/50 text-xs text-slate-400">
                     -

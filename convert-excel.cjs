@@ -69,7 +69,9 @@ for (const year of years) {
         
         if (cellValue) {
           const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-          const titleText = cellValue.replace(/\r\n/g, ' ').substring(0, 100);
+          const cleanedValue = cellValue.replace(/\r\n/g, ' ');
+          const dashIndex = cleanedValue.indexOf('-');
+          const titleText = dashIndex > 0 ? cleanedValue.substring(0, dashIndex).trim() : cleanedValue.trim();
           
           if (currentTask && currentTask.title === titleText) {
             currentTask.endDate = dateStr;

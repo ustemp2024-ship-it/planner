@@ -47,12 +47,15 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
 
   const taskCount = cellTasks.length
 
+  const cellHeight = taskCount > 1 ? `${taskCount * 20}px` : '24px'
+
   return (
     <div
-      className="min-h-[24px] h-6 border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-center relative"
+      className="min-h-[24px] border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-center relative"
+      style={{ height: cellHeight }}
       onClick={handleClick}
     >
-      {cellTasks.map((task, index) => {
+      {cellTasks.map((task) => {
         const isStart = task.startDate === date
         const isEnd = task.endDate === date
         const isSingleDay = task.startDate === task.endDate
@@ -79,11 +82,11 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
             onMouseEnter={() => setHoveredTaskId(task.id)}
             onMouseLeave={() => setHoveredTaskId(null)}
             className={`
-              h-full flex items-center justify-center cursor-pointer transition-all relative group
+              flex items-center justify-start cursor-pointer transition-all relative group px-0.5 overflow-hidden
               ${task.completed ? 'shadow-inner' : 'hover:brightness-95'}
               ${isStart && !isSingleDay ? 'rounded-l-sm' : ''}
               ${isEnd && !isSingleDay ? 'rounded-r-sm' : ''}
-              ${taskCount > 1 ? 'flex-1' : 'w-full'}
+              ${taskCount > 1 ? 'h-5 w-full' : 'h-full w-full'}
             `}
             style={{
               backgroundColor: task.completed 
@@ -99,24 +102,16 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
                 </svg>
               </div>
             )}
-            {!task.completed && isStart && taskCount === 1 && (
+            {!task.completed && isStart && (
               <span 
-                className="text-[8px] font-bold text-white/90 truncate px-0.5 drop-shadow-sm"
+                className="text-[7px] font-bold text-white/90 truncate drop-shadow-sm leading-tight"
                 style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
               >
-                {task.title.charAt(0)}
+                {task.title.length > 6 ? task.title.substring(0, 6) : task.title}
               </span>
             )}
-            {!task.completed && taskCount > 1 && (
-              <span 
-                className="text-[7px] font-bold text-white/90 drop-shadow-sm"
-                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-              >
-                {index + 1}
-              </span>
-            )}
-            {!task.completed && !isStart && taskCount === 1 && (
-              <div className="w-2 h-2 rounded-full bg-white/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+            {!task.completed && !isStart && (
+              <div className="w-1.5 h-1.5 rounded-full bg-white/60 opacity-0 group-hover:opacity-100 transition-opacity" />
             )}
 
             {showTooltip && (
