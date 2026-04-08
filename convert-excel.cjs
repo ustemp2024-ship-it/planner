@@ -1,7 +1,7 @@
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const workbook = XLSX.readFile('/home/master/Downloads/Schedule.xlsx');
+const workbook = XLSX.readFile('/home/master/Downloads/Schedule_cleaned.xlsx');
 
 const categoryMap = {
   'Project': { id: 'project', name: 'Project', color: '#3b82f6' },
@@ -47,8 +47,7 @@ for (const year of years) {
   const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
   console.log('Processing', sheetName, '- rows:', data.length);
 
-  let currentMonth = 0;
-  const rowInterval = (year >= 2026) ? 9 : 8;
+  const rowInterval = (year >= 2026) ? 8 : 7;
   
   for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
     const row = data[rowIdx];
@@ -56,21 +55,7 @@ for (const year of years) {
     
     const firstCol = row[0] ? String(row[0]).trim() : '';
     
-    const monthMatch = firstCol.match(/^(\d{1,2})월$/);
-    if (monthMatch) {
-      currentMonth = parseInt(monthMatch[1]);
-      continue;
-    }
-    
-    if (!firstCol) {
-      if (year >= 2025) {
-        const blockIndex = Math.floor(rowIdx / rowInterval);
-        if (blockIndex < 12) {
-          currentMonth = blockIndex + 1;
-        }
-      }
-      continue;
-    }
+    if (!firstCol) continue;
     
     if (/^\d{1,2}$/.test(firstCol)) continue;
     
@@ -80,14 +65,11 @@ for (const year of years) {
       continue;
     }
     
-    if (currentMonth === 0) {
-      if (year >= 2025) {
-        const blockIndex = Math.floor(rowIdx / rowInterval);
-        currentMonth = blockIndex + 1;
-      } else {
-        console.log('  No month set for category:', firstCol, 'at row', rowIdx);
-        continue;
-      }
+    const blockIndex = Math.floor(rowIdx / rowInterval);
+    const currentMonth = blockIndex + 1;
+    
+    if (currentMonth > 12) {
+      continue;
     }
     
     let currentTask = null;
