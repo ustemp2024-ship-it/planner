@@ -10,57 +10,146 @@ interface TaskModalProps {
   initialDate?: string
 }
 
-export function TaskModal({ isOpen, onClose, task, categoryId, initialDate }: TaskModalProps) {
-  const { addTask, updateTask, deleteTask } = useStore()
+export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId, initialDate }: TaskModalProps) {
+  const { categories, addTask, updateTask, deleteTask } = useStore()
+  const [step, setStep] = useState<'category' | 'task'>('category')
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [title, setTitle] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
     if (task) {
+      setStep('task')
+      setSelectedCategoryId(task.categoryId)
       setTitle(task.title)
       setStartDate(task.startDate)
       setEndDate(task.endDate)
+    } else if (initialCategoryId) {
+      setStep('task')
+      setSelectedCategoryId(initialCategoryId)
+      setTitle('')
+      setStartDate(initialDate || '')
+      setEndDate(initialDate || '')
     } else if (initialDate) {
+      setStep('category')
+      setSelectedCategoryId('')
       setTitle('')
       setStartDate(initialDate)
       setEndDate(initialDate)
     }
-  }, [task, initialDate])
+  }, [task, initialCategoryId, initialDate, isOpen])
 
   if (!isOpen) return null
 
+  const handleCategorySelect = (catId: string) => {
+    setSelectedCategoryId(catId)
+    setStep('task')
+  }
+
+  const handleBack = () => {
+    setStep('category')
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
+    if (!title.trim() || !selectedCategoryId) return
 
     if (task) {
-      updateTask(task.id, { title, startDate, endDate })
-    } else if (categoryId) {
+      updateTask(task.id, { title, startDate, endDate, categoryId: selectedCategoryId })
+    } else {
       addTask({
-        categoryId,
+        categoryId: selectedCategoryId,
         title,
         startDate,
         endDate,
         completed: false,
       })
     }
-    onClose()
+    handleClose()
   }
 
   const handleDelete = () => {
     if (task) {
       deleteTask(task.id)
-      onClose()
+      handleClose()
     }
+  }
+
+  const handleClose = () => {
+    setStep('category')
+    setSelectedCategoryId('')
+    setTitle('')
+    onClose()
+  }
+
+  const selectedCategory = categories.find(c => c.id === selectedCategoryId)
+
+  if (step === 'category' && !task) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm p-4 shadow-xl">
+          <h2 className="text-lg font-semibold mb-4 dark:text-white">카테고리 선택</h2>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {categories.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                카테고리를 먼저 추가해주세요
+              </p>
+            ) : (
+              categories
+                .sort((a, b) => a.order - b.order)
+                .map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategorySelect(cat.id)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    <span className="dark:text-white">{cat.name}</span>
+                  </button>
+                ))
+            )}
+          </div>
+          <button
+            onClick={handleClose}
+            className="w-full mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg dark:text-white"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm p-4 shadow-xl">
-        <h2 className="text-lg font-semibold mb-4 dark:text-white">
-          {task ? '할 일 수정' : '새 할 일'}
-        </h2>
+        <div className="flex items-center gap-2 mb-4">
+          {!task && (
+            <button
+              onClick={handleBack}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            >
+              <svg className="w-5 h-5 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          <h2 className="text-lg font-semibold dark:text-white flex items-center gap-2">
+            {task ? '할 일 수정' : '새 할 일'}
+            {selectedCategory && (
+              <span
+                className="text-sm px-2 py-1 rounded"
+                style={{ backgroundColor: `${selectedCategory.color}33`, color: selectedCategory.color }}
+              >
+                {selectedCategory.name}
+              </span>
+            )}
+          </h2>
+        </div>
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -102,7 +191,7 @@ export function TaskModal({ isOpen, onClose, task, categoryId, initialDate }: Ta
             )}
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg dark:text-white"
             >
               취소

@@ -88,8 +88,9 @@ export function Calendar() {
                   return (
                     <div
                       key={day}
-                      className={`w-10 flex-shrink-0 border-r border-b border-gray-200 dark:border-gray-700 
-                        ${!isValid ? 'bg-gray-200 dark:bg-gray-800' : ''}
+                      onClick={() => isValid && setTaskModal({ isOpen: true, date: dateStr })}
+                      className={`w-10 flex-shrink-0 border-r border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700
+                        ${!isValid ? 'bg-gray-200 dark:bg-gray-800 cursor-default hover:bg-gray-200' : ''}
                         ${isToday ? 'bg-blue-100 dark:bg-blue-900' : ''}
                       `}
                     />
