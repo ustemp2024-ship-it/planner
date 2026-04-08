@@ -168,8 +168,12 @@ for (const year of years) {
     
     let currentTask = null;
     
-    for (let day = 1; day <= 31; day++) {
-      const cellValue = row[day] ? String(row[day]).trim() : '';
+    const dayOffset = (year === 2019 && currentMonth === 6) ? 18 : 0;
+    const maxCol = (year === 2019 && currentMonth === 6) ? 12 : 31;
+    
+    for (let col = 1; col <= maxCol; col++) {
+      const day = col + dayOffset;
+      const cellValue = row[col] ? String(row[col]).trim() : '';
       
       if (cellValue) {
         if (skipPatterns.test(cellValue)) {
