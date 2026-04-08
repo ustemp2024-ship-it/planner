@@ -15,6 +15,7 @@ function App() {
   const [showFilter, setShowFilter] = useState(false)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
+  const [draggedTask, setDraggedTask] = useState<string | null>(null)
   const { exportData, importData, loadDefaultData, tasks, categories, hiddenCategories } = useStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -194,6 +195,9 @@ function App() {
         selectionMode={selectionMode}
         selectedTasks={selectedTasks}
         onToggleSelection={toggleTaskSelection}
+        draggedTaskId={draggedTask}
+        onDragStart={setDraggedTask}
+        onDragEnd={() => setDraggedTask(null)}
       />
 
       <CategoryManager

@@ -11,10 +11,13 @@ interface CalendarProps {
   selectionMode?: boolean
   selectedTasks?: Set<string>
   onToggleSelection?: (taskId: string) => void
+  draggedTaskId?: string | null
+  onDragStart?: (taskId: string | null) => void
+  onDragEnd?: () => void
 }
 
-export function Calendar({ selectionMode = false, selectedTasks = new Set(), onToggleSelection }: CalendarProps) {
-  const { categories, tasks, currentYear, nextYear, prevYear, hiddenCategories } = useStore()
+export function Calendar({ selectionMode = false, selectedTasks = new Set(), onToggleSelection, draggedTaskId, onDragStart, onDragEnd }: CalendarProps) {
+  const { categories, tasks, currentYear, nextYear, prevYear, hiddenCategories, copyTask } = useStore()
   const [taskModal, setTaskModal] = useState<{
     isOpen: boolean
     task?: Task | null
@@ -176,6 +179,17 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                           selectionMode={selectionMode}
                           selectedTasks={selectedTasks}
                           onToggleSelection={onToggleSelection}
+                          draggedTaskId={draggedTaskId}
+                          onDragStart={onDragStart}
+                          onDragEnd={onDragEnd}
+                          onDropTask={(taskId, newDate) => {
+                            const task = tasks.find(t => t.id === taskId)
+                            if (task) {
+                              const duration = new Date(task.endDate).getTime() - new Date(task.startDate).getTime()
+                              const newEndDate = new Date(new Date(newDate).getTime() + duration).toISOString().split('T')[0]
+                              copyTask(taskId, newDate, newEndDate)
+                            }
+                          }}
                         />
                       </div>
                     )

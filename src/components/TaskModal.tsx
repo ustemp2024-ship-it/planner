@@ -309,26 +309,28 @@ export function TaskModal({ isOpen, onClose, task, categoryId: initialCategoryId
               className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none text-sm"
             />
           </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">시작일</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
-              />
+          {task && (
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">시작일</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">종료일</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
-            <div className="flex-1">
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">종료일</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
+          )}
           <div>
             <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

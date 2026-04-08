@@ -12,10 +12,15 @@ interface TaskCellProps {
   selectionMode?: boolean
   selectedTasks?: Set<string>
   onToggleSelection?: (taskId: string) => void
+  draggedTaskId?: string | null
+  onDragStart?: (taskId: string | null) => void
+  onDragEnd?: () => void
+  onDropTask?: (taskId: string, newDate: string) => void
 }
 
-export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask, selectionMode = false, selectedTasks = new Set(), onToggleSelection }: TaskCellProps) {
+export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask, selectionMode = false, selectedTasks = new Set(), onToggleSelection, draggedTaskId, onDragStart, onDragEnd, onDropTask }: TaskCellProps) {
   const { toggleTaskComplete } = useStore()
+  const [isDragOver, setIsDragOver] = useState(false)
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLongPress, setIsLongPress] = useState(false)
@@ -54,9 +59,21 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
 
   return (
     <div
-      className="min-h-[24px] border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-center relative"
+      className={`min-h-[24px] border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-center relative ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
       style={{ height: cellHeight }}
       onClick={handleClick}
+      onDragOver={(e) => {
+        e.preventDefault()
+        if (draggedTaskId) setIsDragOver(true)
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setIsDragOver(false)
+        if (draggedTaskId && onDropTask) {
+          onDropTask(draggedTaskId, date)
+        }
+      }}
     >
       {cellTasks.map((task) => {
         const isStart = task.startDate === date
@@ -67,6 +84,12 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
         return (
           <div
             key={task.id}
+            draggable={!selectionMode}
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = 'copy'
+              onDragStart?.(task.id)
+            }}
+            onDragEnd={() => onDragEnd?.()}
             onClick={(e) => {
               e.stopPropagation()
               if (selectionMode && onToggleSelection) {
