@@ -24,6 +24,7 @@ interface PlannerStore {
 
   exportData: () => string
   importData: (json: string) => void
+  loadDefaultData: () => Promise<void>
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9)
@@ -123,6 +124,20 @@ export const useStore = create<PlannerStore>()(
           }
         } catch (e) {
           console.error('Failed to import data:', e)
+        }
+      },
+
+      loadDefaultData: async () => {
+        const { categories } = get()
+        if (categories.length > 0) return
+        try {
+          const res = await fetch('/default-data.json')
+          const data = await res.json()
+          if (data.categories && data.tasks) {
+            set({ categories: data.categories, tasks: data.tasks })
+          }
+        } catch (e) {
+          console.error('Failed to load default data:', e)
         }
       },
     }),

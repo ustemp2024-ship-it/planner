@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Calendar } from './components/Calendar'
 import { CategoryManager } from './components/CategoryManager'
 import { StatsPanel } from './components/StatsPanel'
@@ -9,7 +9,11 @@ function App() {
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const { exportData, importData } = useStore()
+  const { exportData, importData, loadDefaultData } = useStore()
+
+  useEffect(() => {
+    loadDefaultData()
+  }, [])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleExport = () => {
