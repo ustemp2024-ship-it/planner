@@ -18,7 +18,7 @@ interface PlannerStore {
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   deleteTasks: (ids: string[]) => void
-  copyTask: (id: string, newStartDate: string, newEndDate: string) => void
+  copyTask: (id: string, newStartDate: string, newEndDate: string, newCategoryId?: string) => void
   toggleTaskComplete: (id: string) => void
   markAllTasksComplete: () => void
 
@@ -106,13 +106,14 @@ export const useStore = create<PlannerStore>()(
         })
       },
 
-      copyTask: (id, newStartDate, newEndDate) => {
+      copyTask: (id, newStartDate, newEndDate, newCategoryId) => {
         const task = get().tasks.find((t) => t.id === id)
         if (task) {
           set({
             tasks: [...get().tasks, {
               ...task,
               id: generateId(),
+              categoryId: newCategoryId || task.categoryId,
               startDate: newStartDate,
               endDate: newEndDate,
               completed: false,

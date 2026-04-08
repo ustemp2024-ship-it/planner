@@ -15,7 +15,7 @@ interface TaskCellProps {
   draggedTaskId?: string | null
   onDragStart?: (taskId: string | null) => void
   onDragEnd?: () => void
-  onDropTask?: (taskId: string, newDate: string) => void
+  onDropTask?: (taskId: string, newDate: string, newCategoryId: string) => void
 }
 
 export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask, selectionMode = false, selectedTasks = new Set(), onToggleSelection, draggedTaskId, onDragStart, onDragEnd, onDropTask }: TaskCellProps) {
@@ -71,7 +71,7 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
         e.preventDefault()
         setIsDragOver(false)
         if (draggedTaskId && onDropTask) {
-          onDropTask(draggedTaskId, date)
+          onDropTask(draggedTaskId, date, category.id)
         }
       }}
     >

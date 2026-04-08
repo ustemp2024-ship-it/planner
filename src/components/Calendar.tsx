@@ -182,12 +182,12 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                           draggedTaskId={draggedTaskId}
                           onDragStart={onDragStart}
                           onDragEnd={onDragEnd}
-                          onDropTask={(taskId, newDate) => {
+                          onDropTask={(taskId, newDate, newCategoryId) => {
                             const task = tasks.find(t => t.id === taskId)
                             if (task) {
                               const duration = new Date(task.endDate).getTime() - new Date(task.startDate).getTime()
                               const newEndDate = new Date(new Date(newDate).getTime() + duration).toISOString().split('T')[0]
-                              copyTask(taskId, newDate, newEndDate)
+                              copyTask(taskId, newDate, newEndDate, newCategoryId)
                             }
                           }}
                         />
