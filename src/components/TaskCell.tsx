@@ -12,7 +12,7 @@ interface TaskCellProps {
 
 export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskCellProps) {
   const { toggleTaskComplete } = useStore()
-  const [showTooltip, setShowTooltip] = useState(false)
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLongPress, setIsLongPress] = useState(false)
 
@@ -47,15 +47,18 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
     }
   }
 
+  const taskCount = cellTasks.length
+
   return (
     <div
       className="min-h-[24px] h-6 border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-center relative"
       onClick={handleClick}
     >
-      {cellTasks.map((task) => {
+      {cellTasks.map((task, index) => {
         const isStart = task.startDate === date
         const isEnd = task.endDate === date
         const isSingleDay = task.startDate === task.endDate
+        const showTooltip = hoveredTaskId === task.id
 
         return (
           <div
@@ -75,13 +78,14 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
             onTouchStart={() => handleTouchStart(task)}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
+            onMouseEnter={() => setHoveredTaskId(task.id)}
+            onMouseLeave={() => setHoveredTaskId(null)}
             className={`
-              w-full h-full flex items-center justify-center cursor-pointer transition-all relative group
+              h-full flex items-center justify-center cursor-pointer transition-all relative group
               ${task.completed ? 'shadow-inner' : 'hover:brightness-95'}
               ${isStart && !isSingleDay ? 'rounded-l-sm' : ''}
               ${isEnd && !isSingleDay ? 'rounded-r-sm' : ''}
+              ${taskCount > 1 ? 'flex-1' : 'w-full'}
             `}
             style={{
               backgroundColor: task.completed 
@@ -97,7 +101,7 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
                 </svg>
               </div>
             )}
-            {!task.completed && isStart && (
+            {!task.completed && isStart && taskCount === 1 && (
               <span 
                 className="text-[8px] font-bold text-white/90 truncate px-0.5 drop-shadow-sm"
                 style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
@@ -105,14 +109,22 @@ export function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskC
                 {task.title.charAt(0)}
               </span>
             )}
-            {!task.completed && !isStart && (
+            {!task.completed && taskCount > 1 && (
+              <span 
+                className="text-[7px] font-bold text-white/90 drop-shadow-sm"
+                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+              >
+                {index + 1}
+              </span>
+            )}
+            {!task.completed && !isStart && taskCount === 1 && (
               <div className="w-2 h-2 rounded-full bg-white/60 opacity-0 group-hover:opacity-100 transition-opacity" />
             )}
 
             {showTooltip && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 pointer-events-none">
-                <div className="bg-slate-900 dark:bg-slate-700 text-white text-xs px-2 py-1.5 rounded-lg shadow-xl whitespace-nowrap max-w-[200px] truncate">
-                  <div className="font-semibold">{task.title}</div>
+                <div className="bg-slate-900 dark:bg-slate-700 text-white text-xs px-2 py-1.5 rounded-lg shadow-xl whitespace-nowrap max-w-[200px]">
+                  <div className="font-semibold truncate">{task.title}</div>
                   {task.description && (
                     <div className="text-slate-300 text-[10px] truncate">{task.description}</div>
                   )}
