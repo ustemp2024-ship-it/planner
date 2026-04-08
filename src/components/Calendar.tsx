@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { TaskCell } from './TaskCell'
 import { TaskModal } from './TaskModal'
 import type { Task } from '../types'
+import { getDayOfWeek, isRedDay } from '../utils/holidays'
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
@@ -130,15 +131,23 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                   const isValid = isValidDay(monthIndex, day)
                   const dateStr = getDateString(monthIndex, day)
                   const isToday = dateStr === todayString
+                  const dayOfWeek = isValid ? getDayOfWeek(currentYear, monthIndex, day) : ''
+                  const isRed = isValid && isRedDay(currentYear, monthIndex, day)
                   return (
                     <div
                       key={day}
                       onClick={() => isValid && setTaskModal({ isOpen: true, date: dateStr })}
-                      className={`w-10 flex-shrink-0 h-7 border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer transition-all
+                      className={`w-10 flex-shrink-0 h-7 border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer transition-all flex items-center justify-center
                         ${!isValid ? 'bg-slate-200/60 dark:bg-slate-800/60 cursor-default' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}
                         ${isToday ? 'bg-blue-200/60 dark:bg-blue-800/40 ring-1 ring-blue-400 ring-inset' : ''}
                       `}
-                    />
+                    >
+                      {isValid && (
+                        <span className={`text-[10px] font-medium ${isRed ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
+                          {dayOfWeek}
+                        </span>
+                      )}
+                    </div>
                   )
                 })}
               </div>
