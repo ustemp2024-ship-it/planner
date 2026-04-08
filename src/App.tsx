@@ -5,6 +5,7 @@ import { StatsPanel } from './components/StatsPanel'
 import { ReminderChecker } from './components/ReminderChecker'
 import { SummaryBar } from './components/SummaryBar'
 import { CategoryFilter } from './components/CategoryFilter'
+import { SelectionToolbar } from './components/SelectionToolbar'
 import { useStore } from './store/useStore'
 
 function App() {
@@ -12,8 +13,31 @@ function App() {
   const [showStats, setShowStats] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
   const { exportData, importData, loadDefaultData, tasks, categories, hiddenCategories } = useStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const toggleTaskSelection = useCallback((taskId: string) => {
+    setSelectedTasks(prev => {
+      const next = new Set(prev)
+      if (next.has(taskId)) {
+        next.delete(taskId)
+      } else {
+        next.add(taskId)
+      }
+      return next
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedTasks(new Set())
+  }, [])
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false)
+    setSelectedTasks(new Set())
+  }, [])
 
   useEffect(() => {
     loadDefaultData()
@@ -140,6 +164,17 @@ function App() {
                   </div>
                   데이터 가져오기
                 </button>
+                <button
+                  onClick={() => { setSelectionMode(true); setShowMenu(false) }}
+                  className="w-full px-4 py-3.5 text-left text-sm hover:bg-white/50 dark:hover:bg-slate-700/50 dark:text-white flex items-center gap-3 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </div>
+                  다중 선택 삭제
+                </button>
               </div>
             )}
           </div>
@@ -155,7 +190,11 @@ function App() {
 
       <SummaryBar />
 
-      <Calendar />
+      <Calendar
+        selectionMode={selectionMode}
+        selectedTasks={selectedTasks}
+        onToggleSelection={toggleTaskSelection}
+      />
 
       <CategoryManager
         isOpen={showCategoryManager}
@@ -173,6 +212,14 @@ function App() {
       />
 
       <ReminderChecker />
+
+      {selectionMode && (
+        <SelectionToolbar
+          selectedTasks={selectedTasks}
+          onClearSelection={clearSelection}
+          onExitSelectionMode={exitSelectionMode}
+        />
+      )}
 
       {showMenu && (
         <div 

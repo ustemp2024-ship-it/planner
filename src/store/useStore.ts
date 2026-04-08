@@ -17,6 +17,7 @@ interface PlannerStore {
   addTask: (task: Omit<Task, 'id'>) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
+  deleteTasks: (ids: string[]) => void
   toggleTaskComplete: (id: string) => void
 
   setCurrentYear: (year: number) => void
@@ -93,6 +94,13 @@ export const useStore = create<PlannerStore>()(
       deleteTask: (id) => {
         set({
           tasks: get().tasks.filter((t) => t.id !== id),
+        })
+      },
+
+      deleteTasks: (ids) => {
+        const idSet = new Set(ids)
+        set({
+          tasks: get().tasks.filter((t) => !idSet.has(t.id)),
         })
       },
 

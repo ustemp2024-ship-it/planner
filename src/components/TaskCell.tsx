@@ -9,9 +9,12 @@ interface TaskCellProps {
   tasks: Task[]
   onAddTask: (categoryId: string, date: string) => void
   onEditTask: (task: Task) => void
+  selectionMode?: boolean
+  selectedTasks?: Set<string>
+  onToggleSelection?: (taskId: string) => void
 }
 
-export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask }: TaskCellProps) {
+export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask, selectionMode = false, selectedTasks = new Set(), onToggleSelection }: TaskCellProps) {
   const { toggleTaskComplete } = useStore()
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -66,6 +69,10 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
             key={task.id}
             onClick={(e) => {
               e.stopPropagation()
+              if (selectionMode && onToggleSelection) {
+                onToggleSelection(task.id)
+                return
+              }
               if (isLongPress) {
                 setIsLongPress(false)
                 return
@@ -87,6 +94,7 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
               ${isStart && !isSingleDay ? 'rounded-l-sm' : ''}
               ${isEnd && !isSingleDay ? 'rounded-r-sm' : ''}
               ${taskCount > 1 ? 'h-5 w-full' : 'h-full w-full'}
+              ${selectionMode && selectedTasks.has(task.id) ? 'ring-2 ring-red-500 ring-inset' : ''}
             `}
             style={{
               backgroundColor: task.completed 
@@ -94,7 +102,14 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
                 : `${category.color}50`,
             }}
           >
-            {task.completed && (
+            {selectionMode && selectedTasks.has(task.id) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-red-500/30 z-20">
+                <svg className="w-3.5 h-3.5 text-red-600 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            {!selectionMode && task.completed && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="absolute inset-0 bg-black/10" />
                 <svg className="w-3.5 h-3.5 text-white drop-shadow-sm relative z-10" fill="currentColor" viewBox="0 0 20 20">
