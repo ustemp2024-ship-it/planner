@@ -2,12 +2,15 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Category, Task } from '../types'
 import { PRESET_COLORS } from '../types'
+import { uploadToDrive, downloadFromDrive, type SyncData } from '../utils/googleDrive'
 
 interface PlannerStore {
   categories: Category[]
   tasks: Task[]
   currentYear: number
   hiddenCategories: string[]
+  lastSyncTime: string | null
+  isSyncing: boolean
 
   addCategory: (name: string) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
@@ -31,7 +34,10 @@ interface PlannerStore {
 
   exportData: () => string
   importData: (json: string) => void
-  loadDefaultData: () => Promise<void>
+  loadUserData: () => Promise<void>
+
+  syncToDrive: () => Promise<void>
+  syncFromDrive: () => Promise<void>
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9)
@@ -43,6 +49,8 @@ export const useStore = create<PlannerStore>()(
       tasks: [],
       currentYear: new Date().getFullYear(),
       hiddenCategories: [],
+      lastSyncTime: null,
+      isSyncing: false,
 
       addCategory: (name) => {
         const { categories } = get()
@@ -177,17 +185,70 @@ export const useStore = create<PlannerStore>()(
         }
       },
 
-      loadDefaultData: async () => {
+      loadUserData: async () => {
         const { categories } = get()
         if (categories.length > 0) return
+        
         try {
-          const res = await fetch('/default-data.json')
-          const data = await res.json()
-          if (data.categories && data.tasks) {
-            set({ categories: data.categories, tasks: data.tasks })
+          // Google Drive에서 사용자 데이터 먼저 시도
+          const driveData = await downloadFromDrive()
+          if (driveData && driveData.categories && driveData.tasks) {
+            set({ 
+              categories: driveData.categories as Category[], 
+              tasks: driveData.tasks as Task[],
+              lastSyncTime: new Date().toISOString()
+            })
+            return
+          }
+        } catch (e: any) {
+          console.warn('Failed to load from Google Drive:', e)
+          // Google Drive API 오류 시 인증 재확인 필요할 수 있음
+          if (e.message?.includes('401') || e.message?.includes('403')) {
+            console.error('Authentication error, user may need to re-login')
+          }
+        }
+        
+        // Google Drive에 데이터가 없으면 완전 빈 상태로 시작
+        // 보안상 기본 데이터는 로드하지 않음
+        console.info('Starting with empty state - no data in Google Drive')
+      },
+
+      syncToDrive: async () => {
+        const { categories, tasks } = get()
+        set({ isSyncing: true })
+        try {
+          const data: SyncData = {
+            categories,
+            tasks,
+            lastModified: new Date().toISOString(),
+          }
+          await uploadToDrive(data)
+          set({ lastSyncTime: new Date().toISOString(), isSyncing: false })
+        } catch (e) {
+          console.error('Failed to sync to Drive:', e)
+          set({ isSyncing: false })
+          throw e
+        }
+      },
+
+      syncFromDrive: async () => {
+        set({ isSyncing: true })
+        try {
+          const data = await downloadFromDrive()
+          if (data && data.categories && data.tasks) {
+            set({
+              categories: data.categories as Category[],
+              tasks: data.tasks as Task[],
+              lastSyncTime: new Date().toISOString(),
+              isSyncing: false,
+            })
+          } else {
+            set({ isSyncing: false })
           }
         } catch (e) {
-          console.error('Failed to load default data:', e)
+          console.error('Failed to sync from Drive:', e)
+          set({ isSyncing: false })
+          throw e
         }
       },
     }),
@@ -198,6 +259,7 @@ export const useStore = create<PlannerStore>()(
         tasks: state.tasks,
         currentYear: state.currentYear,
         hiddenCategories: state.hiddenCategories,
+        lastSyncTime: state.lastSyncTime,
       }),
     }
   )

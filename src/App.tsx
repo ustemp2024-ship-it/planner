@@ -6,17 +6,28 @@ import { ReminderChecker } from './components/ReminderChecker'
 import { SummaryBar } from './components/SummaryBar'
 import { CategoryFilter } from './components/CategoryFilter'
 import { SelectionToolbar } from './components/SelectionToolbar'
+import { SyncButton } from './components/SyncButton'
+import { SyncPanel } from './components/SyncPanel'
+import { LoginPage } from './components/LoginPage'
+import { UserProfile } from './components/UserProfile'
+import { AuthDebug } from './components/AuthDebug'
+import { EmptyState } from './components/EmptyState'
 import { useStore } from './store/useStore'
+import { useAuthStore } from './store/useAuthStore'
+import { useAutoSync } from './hooks/useAutoSync'
 
 function App() {
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
+  const [showSyncPanel, setShowSyncPanel] = useState(false)
+  const [isSyncLoggedIn, setIsSyncLoggedIn] = useState(false)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
   const [draggedTask, setDraggedTask] = useState<string | null>(null)
-  const { exportData, importData, loadDefaultData, tasks, categories, hiddenCategories, markAllTasksComplete } = useStore()
+  const { exportData, importData, loadUserData, tasks, categories, hiddenCategories, markAllTasksComplete } = useStore()
+  const { isAuthenticated, isInitialized, initializeAuth } = useAuthStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const toggleTaskSelection = useCallback((taskId: string) => {
@@ -41,8 +52,16 @@ function App() {
   }, [])
 
   useEffect(() => {
-    loadDefaultData()
-  }, [])
+    initializeAuth()
+  }, [initializeAuth])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadUserData()
+    }
+  }, [isAuthenticated, loadUserData])
+
+  useAutoSync(isSyncLoggedIn)
 
   const completionRate = useMemo(() => {
     const completedCount = tasks.filter(t => t.completed).length
@@ -75,8 +94,26 @@ function App() {
     setShowMenu(false)
   }, [importData])
 
+  // 인증 초기화 중이면 로딩 화면 표시
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-slate-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 dark:text-slate-400">초기화 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 인증되지 않은 경우 로그인 페이지 표시
+  if (!isAuthenticated) {
+    return <LoginPage />
+  }
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+      <AuthDebug />
       <header className="flex items-center justify-between px-4 py-3 glass border-b border-white/20 dark:border-slate-700/50 safe-area-top shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -97,6 +134,13 @@ function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          <UserProfile />
+          
+          <SyncButton 
+            onOpenPanel={() => setShowSyncPanel(true)}
+            onLoggedInChange={setIsSyncLoggedIn}
+          />
+          
           <button
             onClick={() => setShowStats(true)}
             className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/25 active:scale-95"
@@ -202,14 +246,31 @@ function App() {
 
       <SummaryBar />
 
-      <Calendar
-        selectionMode={selectionMode}
-        selectedTasks={selectedTasks}
-        onToggleSelection={toggleTaskSelection}
-        draggedTaskId={draggedTask}
-        onDragStart={setDraggedTask}
-        onDragEnd={() => setDraggedTask(null)}
-      />
+      <div className="relative flex-1 overflow-auto min-h-0">
+        {categories.length === 0 ? (
+          <EmptyState 
+            type="welcome" 
+            onCreateCategory={() => setShowCategoryManager(true)}
+          />
+        ) : (
+          <Calendar
+            selectionMode={selectionMode}
+            selectedTasks={selectedTasks}
+            onToggleSelection={toggleTaskSelection}
+            draggedTaskId={draggedTask}
+            onDragStart={setDraggedTask}
+            onDragEnd={() => setDraggedTask(null)}
+          />
+        )}
+        
+        {isSyncLoggedIn && (
+          <SyncPanel
+            isOpen={showSyncPanel}
+            onClose={() => setShowSyncPanel(false)}
+            onLogout={() => setIsSyncLoggedIn(false)}
+          />
+        )}
+      </div>
 
       <CategoryManager
         isOpen={showCategoryManager}

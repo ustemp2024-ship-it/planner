@@ -1,6 +1,31 @@
-# React + TypeScript + Vite
+# Planner App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript + Vite application with Google Drive integration for task planning.
+
+## Setup
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Copy `.env.example` to `.env` and configure your Google credentials:
+   ```bash
+   cp .env.example .env
+   ```
+4. Get Google OAuth credentials from [Google Cloud Console](https://console.cloud.google.com/)
+5. Update the `.env` file with your credentials
+6. Start the development server: `npm run dev`
+
+## Google Drive Integration
+
+This app integrates with Google Drive for data synchronization. You'll need:
+- Google Cloud project with Drive API enabled
+- OAuth 2.0 client ID configured for web application
+- API key with appropriate permissions
+
+## Security
+
+- Never commit the `.env` file to version control
+- Keep your Google credentials secure
+- Use `.env.example` as a template for required environment variables
 
 Currently, two official plugins are available:
 
