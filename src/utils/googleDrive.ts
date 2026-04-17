@@ -217,22 +217,11 @@ export const signIn = (): Promise<void> => {
         })
         currentToken = response.access_token
 
-        // 토큰 즉시 검증
-        console.log('🔍 [SIGNIN] Starting token verification...')
-        console.log('🔑 [SIGNIN] Token to verify:', currentToken ? 'Present' : 'Missing')
-
-        const isValid = await verifyTokenScopes(currentToken)
-        console.log('📋 [SIGNIN] Token verification result:', isValid)
-
-        if (!isValid) {
-          console.error('❌ [SIGNIN] Token verification failed')
-          clearToken()
-          currentToken = null
-          reject(new Error('새 토큰의 권한이 올바르지 않습니다. 다시 로그인을 시도하세요.'))
-          return
-        }
-
-        console.log('✅ [SIGNIN] OAuth login and token verification completed successfully')
+        // CRITICAL FIX: Skip Drive API verification during login
+        // 로그인 시점에서 Drive API 검증을 제거하여 403 타이밍 이슈 방지
+        // 실제 Drive API 호출 시 auto-recovery 메커니즘이 처리함
+        console.log('✅ [SIGNIN] OAuth login completed - skipping Drive API verification')
+        console.log('💡 [SIGNIN] Drive permissions will be verified on first actual API call')
         resolve()
       } catch (error) {
         console.error('❌ 토큰 저장 오류:', error)
