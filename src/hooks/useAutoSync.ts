@@ -35,17 +35,29 @@ export function useAutoSync(isLoggedIn: boolean) {
       isInitialSync.current = false
       console.log('🔄 초기 Google Drive 동기화 시작 (첫 시도)')
 
-      // 약간의 지연을 두어 권한 전파 대기
-      setTimeout(() => {
+      // 권한 전파 대기 + 자동 재시도
+      const attemptSync = (attempt: number = 1) => {
+        console.log(`🔄 초기 동기화 시도 ${attempt}/3`)
+
         syncFromDrive()
           .then(() => {
             lastDataHash.current = getDataHash()
-            console.log('✅ 초기 동기화 완료')
+            console.log('✅ 초기 동기화 완료!')
           })
           .catch((error) => {
-            console.error('❌ 초기 동기화 실패 - 권한 전파 대기 필요할 수 있음:', error)
+            console.error(`❌ 시도 ${attempt} 실패:`, error)
+
+            if (attempt < 3) {
+              const delay = attempt * 3000 // 3초, 6초 지연
+              console.log(`🔄 ${delay/1000}초 후 재시도...`)
+              setTimeout(() => attemptSync(attempt + 1), delay)
+            } else {
+              console.error('❌ 모든 시도 실패 - 수동 새로고침 필요')
+            }
           })
-      }, 2000) // 2초 지연
+      }
+
+      setTimeout(() => attemptSync(), 2000) // 첫 시도는 2초 후
     }
   }, [isLoggedIn])
 
