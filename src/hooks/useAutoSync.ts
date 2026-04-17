@@ -11,19 +11,34 @@ export function useAutoSync(isLoggedIn: boolean) {
   const lastDataHash = useRef<string>('')
   const isInitialSync = useRef(true)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const previousLoginStatus = useRef(isLoggedIn)
 
   const getDataHash = () => JSON.stringify({ categories, tasks })
+
+  // 로그인 상태 변화 감지 및 상태 리셋
+  useEffect(() => {
+    if (previousLoginStatus.current !== isLoggedIn) {
+      console.log('로그인 상태 변화 감지 - useAutoSync 상태 리셋')
+      isInitialSync.current = true  // 새 로그인 시 초기 동기화 활성화
+      lastDataHash.current = ''     // 데이터 해시 초기화
+      previousLoginStatus.current = isLoggedIn
+    }
+  }, [isLoggedIn])
 
   useEffect(() => {
     if (!isLoggedIn || !isSignedIn()) return
 
     if (isInitialSync.current) {
       isInitialSync.current = false
+      console.log('🔄 초기 Google Drive 동기화 시작')
       syncFromDrive()
         .then(() => {
           lastDataHash.current = getDataHash()
+          console.log('✅ 초기 동기화 완료')
         })
-        .catch(() => {})
+        .catch((error) => {
+          console.error('❌ 초기 동기화 실패:', error)
+        })
     }
   }, [isLoggedIn])
 

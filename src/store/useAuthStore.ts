@@ -85,11 +85,12 @@ export const useAuthStore = create<AuthStore>()(
                 // 계정 변경 감지: 이전 사용자와 다른 계정으로 로그인
                 if (savedUser && savedUser.email !== userInfo.email) {
                   console.log(`Account changed from ${savedUser.email} to ${userInfo.email}`)
-                  
+
                   // 모든 계정 변경 시 로컬 데이터 삭제
                   // 각 계정은 오직 자신의 Google Drive 데이터만 사용
                   console.log('Clearing local storage for account change - will load from Google Drive')
                   localStorage.removeItem('planner-storage')
+                  sessionStorage.clear() // 이전 계정 세션 완전 정리
                 }
               } catch (e) {
                 // 파싱 실패 시 안전하게 초기화
@@ -112,11 +113,11 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: () => {
         signOut()
-        
+
         // SECURITY: 토큰만 삭제, 플래너 데이터는 유지 (다음 로그인 시 Google Drive에서 로드)
         localStorage.removeItem('planner-google-token')
-        sessionStorage.removeItem('planner-google-token')
-        
+        sessionStorage.clear() // 전체 세션 정리
+
         set({
           user: null,
           isAuthenticated: false,
