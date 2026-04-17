@@ -12,6 +12,7 @@ import { LoginPage } from './components/LoginPage'
 import { UserProfile } from './components/UserProfile'
 import { AuthDebug } from './components/AuthDebug'
 import { EmptyState } from './components/EmptyState'
+import { ConflictNotification } from './components/ConflictNotification'
 import { useStore } from './store/useStore'
 import { useAuthStore } from './store/useAuthStore'
 import { useAutoSync } from './hooks/useAutoSync'
@@ -26,7 +27,7 @@ function App() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
   const [draggedTask, setDraggedTask] = useState<string | null>(null)
-  const { exportData, importData, loadUserData, tasks, categories, hiddenCategories, markAllTasksComplete } = useStore()
+  const { exportData, importData, loadUserData, tasks, categories, hiddenCategories, markAllTasksComplete, hasConflicts, clearConflicts } = useStore()
   const { isAuthenticated, isInitialized, initializeAuth } = useAuthStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -53,6 +54,18 @@ function App() {
 
   useEffect(() => {
     initializeAuth()
+    
+    // 개발자 도구에서 데이터 초기화용 전역 함수
+    if (typeof window !== 'undefined') {
+      (window as any).clearPlannerData = () => {
+        localStorage.removeItem('planner-google-token')
+        sessionStorage.removeItem('planner-google-token')
+        localStorage.removeItem('planner-storage')
+        console.log('Planner data cleared! Please refresh the page.')
+        window.location.reload()
+      }
+      console.log('Debug: Use clearPlannerData() in console to clear current user data')
+    }
   }, [initializeAuth])
 
   useEffect(() => {
@@ -303,6 +316,11 @@ function App() {
           onClick={() => setShowMenu(false)}
         />
       )}
+      
+      <ConflictNotification 
+        isVisible={hasConflicts} 
+        onClose={clearConflicts} 
+      />
     </div>
   )
 }

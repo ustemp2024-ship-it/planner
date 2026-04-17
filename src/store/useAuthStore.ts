@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { initGoogleApi, signIn, signOut, isSignedIn } from '../utils/googleDrive'
+import { initGoogleApi, signIn, signOut, getUserInfo } from '../utils/googleDrive'
 
 interface User {
   id: string
@@ -23,54 +23,40 @@ const AUTH_STORE_VERSION = 2
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isAuthenticated: false,
       isInitialized: false,
 
       initializeAuth: async () => {
         try {
-          await initGoogleApi()
-          const authenticated = isSignedIn()
-          
-          // 토큰이 만료되었거나 유효하지 않으면 localStorage 정리
-          if (!authenticated) {
-            localStorage.removeItem('planner-google-token')
-            set({ 
-              user: null,
-              isAuthenticated: false, 
-              isInitialized: true 
-            })
-            return
-          }
-          
-          // Google API에서 사용자 정보 가져오기 및 토큰 검증
-          try {
-            const response = await gapi.client.request({
-              path: 'https://www.googleapis.com/oauth2/v1/userinfo',
-            })
-            
-            if (!response.result || !response.result.email) {
-              throw new Error('Invalid user info response')
+          // 저장된 토큰 확인
+          const token = localStorage.getItem('planner-google-token')
+          if (token) {
+            try {
+              const parsedToken = JSON.parse(token)
+              if (parsedToken.expiresAt > Date.now()) {
+                // 실제 Google 사용자 정보 가져오기
+                const userInfo = await getUserInfo()
+                if (userInfo) {
+                  set({
+                    user: userInfo,
+                    isAuthenticated: true,
+                    isInitialized: true,
+                  })
+                  return
+                }
+              }
+            } catch (e) {
+              localStorage.removeItem('planner-google-token')
             }
-            
-            const userInfo = response.result
-            set({
-              user: {
-                id: userInfo.id,
-                email: userInfo.email,
-                name: userInfo.name,
-                picture: userInfo.picture,
-              },
-              isAuthenticated: true,
-              isInitialized: true,
-            })
-          } catch (e) {
-            console.error('Failed to get user info, forcing logout:', e)
-            // 토큰이 무효하면 강제 로그아웃
-            get().logout()
-            set({ isInitialized: true })
           }
+          
+          set({ 
+            user: null,
+            isAuthenticated: false, 
+            isInitialized: true 
+          })
         } catch (e) {
           console.error('Failed to initialize auth:', e)
           set({ 
@@ -83,23 +69,41 @@ export const useAuthStore = create<AuthStore>()(
 
       login: async () => {
         try {
+          await initGoogleApi()
           await signIn()
           
-          // 로그인 후 사용자 정보 가져오기
-          const response = await gapi.client.request({
-            path: 'https://www.googleapis.com/oauth2/v1/userinfo',
-          })
-          
-          const userInfo = response.result
-          set({
-            user: {
-              id: userInfo.id,
-              email: userInfo.email,
-              name: userInfo.name,
-              picture: userInfo.picture,
-            },
-            isAuthenticated: true,
-          })
+          // 로그인 성공 시 실제 사용자 정보 가져오기
+          const userInfo = await getUserInfo()
+          if (userInfo) {
+            // 이전 사용자와 다른 경우 로컬 스토어 초기화
+            const savedAuthData = localStorage.getItem('auth-storage')
+            if (savedAuthData) {
+              try {
+                const parsed = JSON.parse(savedAuthData)
+                const savedUser = parsed.state?.user
+                
+                // 계정 변경 감지: 이전 사용자와 다른 계정으로 로그인
+                if (savedUser && savedUser.email !== userInfo.email) {
+                  console.log(`Account changed from ${savedUser.email} to ${userInfo.email}`)
+                  
+                  // 모든 계정 변경 시 로컬 데이터 삭제
+                  // 각 계정은 오직 자신의 Google Drive 데이터만 사용
+                  console.log('Clearing local storage for account change - will load from Google Drive')
+                  localStorage.removeItem('planner-storage')
+                }
+              } catch (e) {
+                // 파싱 실패 시 안전하게 초기화
+                localStorage.removeItem('planner-storage')
+              }
+            }
+            
+            set({
+              user: userInfo,
+              isAuthenticated: true,
+            })
+          } else {
+            throw new Error('Failed to get user info')
+          }
         } catch (e) {
           console.error('Login failed:', e)
           throw e
@@ -108,6 +112,11 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: () => {
         signOut()
+        
+        // SECURITY: 토큰만 삭제, 플래너 데이터는 유지 (다음 로그인 시 Google Drive에서 로드)
+        localStorage.removeItem('planner-google-token')
+        sessionStorage.removeItem('planner-google-token')
+        
         set({
           user: null,
           isAuthenticated: false,

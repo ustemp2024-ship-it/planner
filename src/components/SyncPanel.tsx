@@ -28,10 +28,22 @@ export function SyncPanel({ isOpen, onClose, onLogout }: SyncPanelProps) {
     }
   }
 
-  const handleLogout = () => {
-    signOut()
-    onLogout()
-    onClose()
+  const handleLogout = async () => {
+    try {
+      console.log('Logout button clicked')
+      await new Promise(resolve => {
+        signOut()
+        setTimeout(resolve, 100) // 약간의 지연으로 정리 시간 확보
+      })
+      onLogout()
+      onClose()
+      console.log('Logout completed successfully')
+    } catch (e) {
+      console.error('Logout error:', e)
+      // 에러가 발생해도 UI 상태는 업데이트
+      onLogout()
+      onClose()
+    }
   }
 
   if (!isOpen) return null

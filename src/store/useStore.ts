@@ -11,6 +11,8 @@ interface PlannerStore {
   hiddenCategories: string[]
   lastSyncTime: string | null
   isSyncing: boolean
+  hasConflicts: boolean
+  conflictCount: number
 
   addCategory: (name: string) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
@@ -38,19 +40,101 @@ interface PlannerStore {
 
   syncToDrive: () => Promise<void>
   syncFromDrive: () => Promise<void>
+  clearConflicts: () => void
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9)
 
+// 스마트 데이터 병합 함수
+interface MergeData {
+  local: { categories: Category[], tasks: Task[] }
+  remote: { categories: Category[], tasks: Task[] }
+  lastSyncTime: string | null
+  remoteLastModified: string
+}
+
+interface MergeResult {
+  categories: Category[]
+  tasks: Task[]
+  hasConflicts: boolean
+}
+
+const smartMergeData = (data: MergeData): MergeResult => {
+  const { local, remote, lastSyncTime, remoteLastModified } = data
+  let hasConflicts = false
+  
+  // 마지막 동기화 이후 로컬 변경사항이 있는지 확인
+  const hasLocalChanges = !lastSyncTime || new Date(lastSyncTime) < new Date(remoteLastModified)
+  
+  if (!hasLocalChanges) {
+    // 로컬 변경사항이 없으면 원격 데이터 사용
+    return { categories: remote.categories, tasks: remote.tasks, hasConflicts: false }
+  }
+  
+  // 카테고리 병합 (ID 기반)
+  const categoryMap = new Map<string, Category>()
+  
+  // 원격 카테고리 먼저 추가
+  remote.categories.forEach(cat => categoryMap.set(cat.id, cat))
+  
+  // 로컬 카테고리 추가/업데이트
+  local.categories.forEach(localCat => {
+    const remoteCat = categoryMap.get(localCat.id)
+    if (!remoteCat) {
+      // 새로운 로컬 카테고리
+      categoryMap.set(localCat.id, localCat)
+    } else {
+      // 이름이 다르면 충돌 (로컬 우선)
+      if (remoteCat.name !== localCat.name) {
+        hasConflicts = true
+        console.warn(`Category conflict: ${remoteCat.name} vs ${localCat.name}`)
+      }
+      categoryMap.set(localCat.id, localCat) // 로컬 우선
+    }
+  })
+  
+  // 태스크 병합 (ID 기반, 더 복잡한 로직)
+  const taskMap = new Map<string, Task>()
+  
+  // 원격 태스크 먼저 추가
+  remote.tasks.forEach(task => taskMap.set(task.id, task))
+  
+  // 로컬 태스크 추가/업데이트
+  local.tasks.forEach(localTask => {
+    const remoteTask = taskMap.get(localTask.id)
+    if (!remoteTask) {
+      // 새로운 로컬 태스크
+      taskMap.set(localTask.id, localTask)
+    } else {
+      // 태스크 내용이 다르면 충돌 처리
+      if (remoteTask.title !== localTask.title || 
+          remoteTask.completed !== localTask.completed ||
+          remoteTask.categoryId !== localTask.categoryId) {
+        hasConflicts = true
+        console.warn(`Task conflict detected: ${localTask.title}`)
+      }
+      taskMap.set(localTask.id, localTask) // 로컬 우선
+    }
+  })
+  
+  return {
+    categories: Array.from(categoryMap.values()).sort((a, b) => a.order - b.order),
+    tasks: Array.from(taskMap.values()),
+    hasConflicts
+  }
+}
+
 export const useStore = create<PlannerStore>()(
   persist(
     (set, get) => ({
-      categories: [],
-      tasks: [],
-      currentYear: new Date().getFullYear(),
-      hiddenCategories: [],
-      lastSyncTime: null,
-      isSyncing: false,
+        categories: [],
+        tasks: [],
+        currentYear: new Date().getFullYear(),
+        hiddenCategories: [],
+        lastSyncTime: null,
+        isSyncing: false,
+        hasConflicts: false,
+        conflictCount: 0,
 
       addCategory: (name) => {
         const { categories } = get()
@@ -186,31 +270,53 @@ export const useStore = create<PlannerStore>()(
       },
 
       loadUserData: async () => {
-        const { categories } = get()
-        if (categories.length > 0) return
+        // 항상 로컬 캐시 무시하고 Google Drive에서 강제 로드
+        console.log('🔄 Force loading user data from Google Drive (ignoring local cache)...')
         
         try {
-          // Google Drive에서 사용자 데이터 먼저 시도
           const driveData = await downloadFromDrive()
           if (driveData && driveData.categories && driveData.tasks) {
+            console.log('✅ Found data in Google Drive:', {
+              categories: driveData.categories.length,
+              tasks: driveData.tasks.length
+            })
+            
+            // 완전히 새로운 상태로 교체
             set({ 
               categories: driveData.categories as Category[], 
               tasks: driveData.tasks as Task[],
-              lastSyncTime: new Date().toISOString()
+              currentYear: new Date().getFullYear(),
+              hiddenCategories: [],
+              lastSyncTime: new Date().toISOString(),
+              isSyncing: false,
+              hasConflicts: false,
+              conflictCount: 0
             })
+            console.log('✅ Successfully replaced all data from Google Drive')
             return
+          } else {
+            console.log('❌ No valid data found in Google Drive')
           }
         } catch (e: any) {
-          console.warn('Failed to load from Google Drive:', e)
-          // Google Drive API 오류 시 인증 재확인 필요할 수 있음
+          console.error('❌ Failed to load from Google Drive:', e)
           if (e.message?.includes('401') || e.message?.includes('403')) {
-            console.error('Authentication error, user may need to re-login')
+            console.error('🔒 Authentication error - user may need to re-login')
+            throw new Error('Google Drive authentication failed')
           }
         }
         
         // Google Drive에 데이터가 없으면 완전 빈 상태로 시작
-        // 보안상 기본 데이터는 로드하지 않음
-        console.info('Starting with empty state - no data in Google Drive')
+        console.info('🆕 Starting with completely empty state')
+        set({
+          categories: [],
+          tasks: [],
+          currentYear: new Date().getFullYear(),
+          hiddenCategories: [],
+          lastSyncTime: null,
+          isSyncing: false,
+          hasConflicts: false,
+          conflictCount: 0
+        })
       },
 
       syncToDrive: async () => {
@@ -236,12 +342,28 @@ export const useStore = create<PlannerStore>()(
         try {
           const data = await downloadFromDrive()
           if (data && data.categories && data.tasks) {
+            const { categories: localCategories, tasks: localTasks, lastSyncTime } = get()
+            
+            // 스마트 병합: 타임스탬프 기반으로 충돌 해결
+            const mergedData = smartMergeData({
+              local: { categories: localCategories, tasks: localTasks },
+              remote: { categories: data.categories as Category[], tasks: data.tasks as Task[] },
+              lastSyncTime,
+              remoteLastModified: data.lastModified
+            })
+            
             set({
-              categories: data.categories as Category[],
-              tasks: data.tasks as Task[],
+              categories: mergedData.categories,
+              tasks: mergedData.tasks,
               lastSyncTime: new Date().toISOString(),
               isSyncing: false,
             })
+            
+            // 충돌이 발생했다면 상태 업데이트
+            if (mergedData.hasConflicts) {
+              console.warn('Data conflicts detected and resolved automatically')
+              set({ hasConflicts: true, conflictCount: get().conflictCount + 1 })
+            }
           } else {
             set({ isSyncing: false })
           }
@@ -250,6 +372,10 @@ export const useStore = create<PlannerStore>()(
           set({ isSyncing: false })
           throw e
         }
+      },
+
+      clearConflicts: () => {
+        set({ hasConflicts: false })
       },
     }),
     {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { TaskCell } from './TaskCell'
 import { TaskModal } from './TaskModal'
@@ -25,6 +25,9 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
     categoryId?: string
     date?: string
   }>({ isOpen: false })
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const monthRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
   const sortedCategories = useMemo(() => 
     [...categories]
@@ -68,6 +71,48 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
   const todayMonth = new Date().getMonth()
   const todayDay = new Date().getDate()
 
+  const scrollToMonth = (monthIndex: number) => {
+    const monthElement = monthRefs.current[monthIndex]
+    if (monthElement && scrollContainerRef.current) {
+      const container = scrollContainerRef.current
+      const elementTop = monthElement.offsetTop
+      const headerHeight = 60 // 헤더 높이 고려
+      container.scrollTo({
+        top: elementTop - headerHeight,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  const handleDateSearch = (month: number) => {
+    if (month >= 1 && month <= 12) {
+      const monthIndex = month - 1
+      scrollToMonth(monthIndex)
+      setShowDatePicker(false)
+    }
+  }
+
+  const goToToday = () => {
+    if (currentYear === new Date().getFullYear()) {
+      scrollToMonth(todayMonth)
+    }
+  }
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showDatePicker) {
+        const target = event.target as HTMLElement
+        if (!target.closest('[data-date-picker]')) {
+          setShowDatePicker(false)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showDatePicker])
+
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 glass border-b border-white/20 dark:border-slate-700/50">
@@ -86,6 +131,28 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
               올해
             </span>
           )}
+          
+          {/* 날짜 탐색 버튼들 */}
+          <div className="flex items-center gap-2 ml-4">
+            {currentYear === new Date().getFullYear() && (
+              <button
+                onClick={goToToday}
+                className="px-3 py-1.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors"
+              >
+                오늘
+              </button>
+            )}
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="p-2 rounded-lg bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+              title="월 탐색"
+              data-date-picker
+            >
+              <svg className="w-4 h-4 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
         <button
           onClick={nextYear}
@@ -97,7 +164,35 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      {/* 월 선택 드롭다운 */}
+      {showDatePicker && (
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-20 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 min-w-64" data-date-picker>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">월 선택</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {MONTHS.map((monthName, index) => (
+              <button
+                key={index}
+                onClick={() => handleDateSearch(index + 1)}
+                className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                  index === todayMonth && currentYear === new Date().getFullYear()
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-medium'
+                    : 'bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600'
+                }`}
+              >
+                {monthName}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowDatePicker(false)}
+            className="w-full mt-3 px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+          >
+            닫기
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto" ref={scrollContainerRef}>
         <div className="min-w-max">
           <div className="flex sticky top-0 z-10 glass">
             <div className="w-24 flex-shrink-0 px-2 py-2 border-r border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-100/80 dark:bg-slate-900/80">
@@ -117,7 +212,12 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
           </div>
 
           {MONTHS.map((monthName, monthIndex) => (
-            <div key={monthIndex} className="animate-fade-in" style={{ animationDelay: `${monthIndex * 20}ms` }}>
+            <div 
+              key={monthIndex} 
+              className="animate-fade-in" 
+              style={{ animationDelay: `${monthIndex * 20}ms` }}
+              ref={(el) => { monthRefs.current[monthIndex] = el }}
+            >
               <div className="flex sticky left-0">
                 <div className={`w-24 flex-shrink-0 px-2 py-1.5 border-r border-b border-slate-200/50 dark:border-slate-700/50 
                   ${monthIndex === todayMonth && currentYear === new Date().getFullYear() 
