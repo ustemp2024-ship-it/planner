@@ -26,19 +26,26 @@ export function useAutoSync(isLoggedIn: boolean) {
   }, [isLoggedIn])
 
   useEffect(() => {
-    if (!isLoggedIn || !isSignedIn()) return
+    if (!isLoggedIn || !isSignedIn()) {
+      console.log('⏸️ 초기 동기화 대기 - 로그인 상태:', isLoggedIn, '토큰 유효:', isSignedIn())
+      return
+    }
 
     if (isInitialSync.current) {
       isInitialSync.current = false
-      console.log('🔄 초기 Google Drive 동기화 시작')
-      syncFromDrive()
-        .then(() => {
-          lastDataHash.current = getDataHash()
-          console.log('✅ 초기 동기화 완료')
-        })
-        .catch((error) => {
-          console.error('❌ 초기 동기화 실패:', error)
-        })
+      console.log('🔄 초기 Google Drive 동기화 시작 (첫 시도)')
+
+      // 약간의 지연을 두어 권한 전파 대기
+      setTimeout(() => {
+        syncFromDrive()
+          .then(() => {
+            lastDataHash.current = getDataHash()
+            console.log('✅ 초기 동기화 완료')
+          })
+          .catch((error) => {
+            console.error('❌ 초기 동기화 실패 - 권한 전파 대기 필요할 수 있음:', error)
+          })
+      }, 2000) // 2초 지연
     }
   }, [isLoggedIn])
 
