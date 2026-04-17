@@ -69,11 +69,20 @@ export const useAuthStore = create<AuthStore>()(
 
       login: async () => {
         try {
+          console.log('🚀 [LOGIN] Starting OAuth login process')
+
+          console.log('📡 [LOGIN] Step 1: Initializing Google API...')
           await initGoogleApi()
+          console.log('✅ [LOGIN] Google API initialized successfully')
+
+          console.log('🔐 [LOGIN] Step 2: Attempting sign in...')
           await signIn()
-          
-          // 로그인 성공 시 실제 사용자 정보 가져오기
+          console.log('✅ [LOGIN] Sign in completed successfully')
+
+          console.log('👤 [LOGIN] Step 3: Getting user info...')
           const userInfo = await getUserInfo()
+          console.log('📋 [LOGIN] User info result:', userInfo)
+
           if (userInfo) {
             // 이전 사용자와 다른 경우 로컬 스토어 초기화
             const savedAuthData = localStorage.getItem('auth-storage')
@@ -106,7 +115,12 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('Failed to get user info')
           }
         } catch (e) {
-          console.error('Login failed:', e)
+          console.error('❌ [LOGIN] OAuth login failed at step:', e)
+          console.error('❌ [LOGIN] Error details:', {
+            message: e instanceof Error ? e.message : 'Unknown error',
+            stack: e instanceof Error ? e.stack : undefined,
+            errorObject: e
+          })
           throw e
         }
       },

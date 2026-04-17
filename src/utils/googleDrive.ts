@@ -171,10 +171,12 @@ export const signIn = (): Promise<void> => {
       if (resolved) return // 이미 해결됨
       resolved = true
 
-      console.log('OAuth 콜백 응답 수신:', {
+      console.log('📞 [SIGNIN] OAuth callback received:', {
         hasError: !!response.error,
         hasAccessToken: !!response.access_token,
-        expiresIn: response.expires_in
+        expiresIn: response.expires_in,
+        errorType: response.error || 'none',
+        fullResponse: response
       })
 
       if (response.error) {
@@ -216,18 +218,21 @@ export const signIn = (): Promise<void> => {
         currentToken = response.access_token
 
         // 토큰 즉시 검증
-        console.log('🔍 새 토큰 즉시 검증...')
+        console.log('🔍 [SIGNIN] Starting token verification...')
+        console.log('🔑 [SIGNIN] Token to verify:', currentToken ? 'Present' : 'Missing')
+
         const isValid = await verifyTokenScopes(currentToken)
+        console.log('📋 [SIGNIN] Token verification result:', isValid)
 
         if (!isValid) {
-          console.error('❌ 새로 받은 토큰 검증 실패')
+          console.error('❌ [SIGNIN] Token verification failed')
           clearToken()
           currentToken = null
           reject(new Error('새 토큰의 권한이 올바르지 않습니다. 다시 로그인을 시도하세요.'))
           return
         }
 
-        console.log('✅ Google 로그인 및 토큰 검증 완료')
+        console.log('✅ [SIGNIN] OAuth login and token verification completed successfully')
         resolve()
       } catch (error) {
         console.error('❌ 토큰 저장 오류:', error)
@@ -236,7 +241,9 @@ export const signIn = (): Promise<void> => {
     }
 
     try {
-      console.log('🌐 OAuth 요청 전송 중...')
+      console.log('🌐 [SIGNIN] Starting OAuth request...')
+      console.log('🔧 [SIGNIN] Client ID check:', CLIENT_ID ? 'Present' : 'Missing')
+      console.log('🔧 [SIGNIN] Required scopes:', SCOPES)
 
       // 모든 필요한 권한을 강제로 요청
       const requestOptions = {
@@ -245,10 +252,14 @@ export const signIn = (): Promise<void> => {
         include_granted_scopes: true      // 기존 승인된 범위 포함
       }
 
+      console.log('⚙️ [SIGNIN] Request options:', requestOptions)
+      console.log('🚀 [SIGNIN] Triggering OAuth popup...')
+
       if (isSafari) {
-        console.log('Safari 호환 OAuth 플로우 사용')
+        console.log('🦜 [SIGNIN] Using Safari-compatible OAuth flow')
         tokenClient.requestAccessToken(requestOptions)
       } else {
+        console.log('🌐 [SIGNIN] Using standard OAuth flow')
         tokenClient.requestAccessToken(requestOptions)
       }
 
@@ -270,7 +281,11 @@ export const signIn = (): Promise<void> => {
 
     } catch (error) {
       resolved = true
-      console.error('❌ OAuth 요청 오류:', error)
+      console.error('❌ [SIGNIN] OAuth request error:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorObject: error
+      })
       reject(new Error('Google 로그인 요청 중 오류가 발생했습니다: ' + (error as Error).message))
     }
   })
