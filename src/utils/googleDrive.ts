@@ -1,3 +1,43 @@
+// 토큰 검증 함수 (SCOPES 상수 아래에 추가)
+  const verifyTokenScopes = async (token: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${token}`)
+      const tokenInfo = await response.json()
+
+      if (!response.ok) {
+        console.log('⚠️ 토큰 만료 또는 유효하지 않음')
+        return false
+      }
+
+      const hasRequiredScope = tokenInfo.scope.includes('drive.appdata')
+      if (!hasRequiredScope) {
+        console.log('⚠️ drive.appdata 권한 없음. 재인증 필요.')
+        return false
+      }
+
+      console.log('✅ 토큰 검증 성공')
+      return true
+    } catch (error) {
+      console.error('토큰 검증 실패:', error)
+      return false
+    }
+  }
+
+  // 자동 토큰 복구 함수
+  const autoFixToken = async (): Promise<void> => {
+    console.log('🔄 토큰 자동 복구 시작...')
+
+    // 기존 토큰 삭제
+    clearToken()
+    currentToken = null
+
+    // 사용자에게 알림
+    alert('🔑 Google Drive 권한을 다시 설정합니다. 로그인 버튼을 클릭해주세요.')
+
+    // 페이지 새로고침으로 로그인 상태 초기화
+    window.location.reload()
+  }
+
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const FILE_NAME = 'planner-data.json'
@@ -289,6 +329,16 @@ export const uploadToDrive = async (data: SyncData): Promise<void> => {
     body: form,
   })
 
+  if (response.status === 403) {
+    console.log('🚨 403 에러 감지. 토큰 검증 시작...')
+    const isValidToken = await verifyTokenScopes(currentToken)
+
+    if (!isValidToken) {
+      await autoFixToken()
+      return
+    }
+  }
+
   if (!response.ok) {
     throw new Error('Failed to upload to Drive')
   }
@@ -306,11 +356,20 @@ export const downloadFromDrive = async (): Promise<SyncData | null> => {
     }
   })
 
-  if (!response.ok) throw new Error('Failed to download from Drive')
+  if (response.status === 403) {
+        console.log('🚨 403 에러 감지. 토큰 검증 시작...')
+        const isValidToken = await verifyTokenScopes(currentToken)
+
+        if (!isValidToken) {
+          await autoFixToken()
+          return null
+        }
+      }
+
+        if (!response.ok) throw new Error('Failed to download from Drive')
   
   return await response.json()
 }
-
 export const getUserInfo = async (): Promise<{ id: string; email: string; name: string; picture?: string } | null> => {
   if (!currentToken) {
     const savedToken = loadToken()
