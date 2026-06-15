@@ -359,52 +359,6 @@ export const isSignedIn = (): boolean => {
   return token !== null && currentToken !== null
 }
 
-// 토큰 검증 함수 (보안 강화 버전)
-const verifyTokenScopes = async (token: string): Promise<boolean> => {
-  try {
-    console.log('🔍 토큰 검증 시작...')
-
-    // 보안 강화: Authorization 헤더 사용, URL 쿼리 노출 방지
-    const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-
-    if (!response.ok) {
-      console.log('⚠️ 토큰 만료 또는 유효하지 않음 (HTTP ' + response.status + ')')
-      return false
-    }
-
-    const userInfo = await response.json()
-
-    // 토큰이 유효하면 추가로 Drive API 권한 체크 (실제 호출과 동일하게)
-    const testParams = new URLSearchParams({
-      spaces: 'appDataFolder',
-      fields: 'files(id, name)',
-      q: `name='test-permission-check.json'`,
-      pageSize: '1'
-    })
-
-    const driveResponse = await fetch(`https://www.googleapis.com/drive/v3/files?${testParams}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-
-    if (!driveResponse.ok) {
-      console.log('⚠️ Drive API 권한 없음 (HTTP ' + driveResponse.status + ') - 스코프 재인증 필요')
-      return false
-    }
-
-    console.log('✅ 토큰 검증 성공 - 사용자:', userInfo.email)
-    return true
-  } catch (error) {
-    console.error('토큰 검증 실패:', error)
-    return false
-  }
-}
-
 // 무한 루프 방지 플래그
 let fixTokenInProgress = false
 
@@ -498,7 +452,7 @@ const findFile = async (retryCount = 0): Promise<string | null> => {
   }
 
   // CRITICAL 수정: 사전 검증 제거, 실제 API 호출에서 403 처리
-  // verifyTokenScopes() 제거 - 실제 API 호출에서 처리하여 403 자동 복구 활성화
+  // 토큰 검증은 실제 API 호출에서 처리하여 403 자동 복구 활성화
 
   const params = new URLSearchParams({
     spaces: 'appDataFolder',
@@ -581,7 +535,7 @@ export const uploadToDrive = async (data: SyncData, retryCount = 0): Promise<voi
   }
 
   // CRITICAL 수정: 사전 검증 제거, 실제 API 호출에서 403 처리
-  // verifyTokenScopes() 제거 - 실제 API 호출에서 처리하여 403 자동 복구 활성화
+  // 토큰 검증은 실제 API 호출에서 처리하여 403 자동 복구 활성화
 
   try {
     console.log('📂 Google Drive 파일 업로드 시작...')
@@ -667,7 +621,7 @@ export const downloadFromDrive = async (retryCount = 0): Promise<SyncData | null
   }
 
   // CRITICAL 수정: 사전 검증 제거, 실제 API 호출에서 403 처리
-  // verifyTokenScopes() 제거 - 실제 API 호출에서 처리하여 403 자동 복구 활성화
+  // 토큰 검증은 실제 API 호출에서 처리하여 403 자동 복구 활성화
 
   try {
     console.log('📥 Google Drive에서 데이터 다운로드 시작...')

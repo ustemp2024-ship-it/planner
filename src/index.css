@@ -105,3 +105,17 @@ body {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
+
+/* Sticky header styles */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .sticky-header {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
