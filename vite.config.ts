@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/planner/',
+  base: process.env.GITHUB_PAGES ? '/planner/' : '/',
   server: {
     host: true,
   },
