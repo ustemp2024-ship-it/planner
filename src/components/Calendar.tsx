@@ -17,6 +17,7 @@ interface CalendarProps {
   onDragEnd?: () => void
 }
 
+// Last updated: 2026-06-18 - Fixed headers
 export function Calendar({ selectionMode = false, selectedTasks = new Set(), onToggleSelection, draggedTaskId, onDragStart, onDragEnd }: CalendarProps) {
   const { categories, tasks, currentYear, nextYear, prevYear, hiddenCategories, copyTask } = useStore()
   const [taskModal, setTaskModal] = useState<{
