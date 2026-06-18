@@ -12,12 +12,16 @@ let currentToken: string | null = null
 const saveToken = (token: { access_token: string; expires_in: number }) => {
   try {
     const expiresAt = Date.now() + token.expires_in * 1000
-    const tokenData = JSON.stringify({ ...token, expiresAt })
+    const tokenData = JSON.stringify({ 
+      ...token, 
+      expiresAt,
+      timestamp: Date.now() // 토큰 생성 시각 추가
+    })
 
     // Safari localStorage 호환성 확인
     if (typeof Storage !== 'undefined') {
       localStorage.setItem(TOKEN_KEY, tokenData)
-      console.log('Token saved to localStorage')
+      console.log('✅ Token saved to localStorage')
     } else {
       console.warn('localStorage not available, using sessionStorage')
       sessionStorage.setItem(TOKEN_KEY, tokenData)
@@ -26,7 +30,11 @@ const saveToken = (token: { access_token: string; expires_in: number }) => {
     console.error('Failed to save token:', error)
     // Safari 사생활 보호 모드에서 localStorage 차단 시 대안
     try {
-      sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ ...token, expiresAt: Date.now() + token.expires_in * 1000 }))
+      sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ 
+        ...token, 
+        expiresAt: Date.now() + token.expires_in * 1000,
+        timestamp: Date.now()
+      }))
       console.log('Token saved to sessionStorage as fallback')
     } catch (sessionError) {
       console.error('Both localStorage and sessionStorage failed:', sessionError)
@@ -285,29 +293,51 @@ export const signIn = (): Promise<void> => {
 
 export const signOut = () => {
   try {
-    console.log('Starting sign out process...')
+    console.log('🚪 Starting complete sign out process...')
 
     // Google 토큰 해제 (에러가 발생해도 계속 진행)
     if (currentToken && typeof google !== 'undefined' && google.accounts) {
       try {
         google.accounts.oauth2.revoke(currentToken, () => {
-          console.log('Google token revoked')
+          console.log('✅ Google token revoked')
         })
       } catch (e) {
         console.warn('Failed to revoke Google token:', e)
       }
     }
 
-    // 로컬 상태 정리
+    // 로컬 상태 완전 정리
     currentToken = null
     clearToken()
+    
+    // 추가: 모든 Google/플래너 관련 localStorage 항목 삭제
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && (key.includes('planner') || key.includes('google') || key.includes('token') || key.includes('auth'))) {
+        keysToRemove.push(key)
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key)
+      console.log(`  Removed: ${key}`)
+    })
+    
+    // sessionStorage도 완전 정리
+    sessionStorage.clear()
+    
+    // 토큰 클라이언트 리셋
+    tokenClient = null
 
-    console.log('Sign out completed')
+    console.log('✅ Sign out completed - All auth data cleared')
   } catch (e) {
     console.error('Sign out error:', e)
     // 에러가 발생해도 로컬 정리는 수행
     currentToken = null
     clearToken()
+    sessionStorage.clear()
+    tokenClient = null
   }
 }
 
