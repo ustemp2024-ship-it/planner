@@ -259,31 +259,31 @@ function App() {
 
       <SummaryBar />
 
-      <div className="relative flex-1 overflow-auto min-h-0">
-        {categories.length === 0 ? (
+      {categories.length === 0 ? (
+        <div className="relative flex-1 overflow-auto min-h-0">
           <EmptyState 
             type="welcome" 
             onCreateCategory={() => setShowCategoryManager(true)}
           />
-        ) : (
-          <Calendar
-            selectionMode={selectionMode}
-            selectedTasks={selectedTasks}
-            onToggleSelection={toggleTaskSelection}
+        </div>
+      ) : (
+        <Calendar
+          selectionMode={selectionMode}
+          selectedTasks={selectedTasks}
+          onToggleSelection={toggleTaskSelection}
             draggedTaskId={draggedTask}
             onDragStart={setDraggedTask}
             onDragEnd={() => setDraggedTask(null)}
-          />
-        )}
-        
-        {isSyncLoggedIn && (
-          <SyncPanel
-            isOpen={showSyncPanel}
-            onClose={() => setShowSyncPanel(false)}
-            onLogout={() => setIsSyncLoggedIn(false)}
-          />
-        )}
-      </div>
+        />
+      )}
+      
+      {isSyncLoggedIn && (
+        <SyncPanel
+          isOpen={showSyncPanel}
+          onClose={() => setShowSyncPanel(false)}
+          onLogout={() => setIsSyncLoggedIn(false)}
+        />
+      )}
 
       <CategoryManager
         isOpen={showCategoryManager}
