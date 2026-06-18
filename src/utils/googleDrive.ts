@@ -1,4 +1,6 @@
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+// drive.appdata: 앱 전용 숨김 폴더만 접근 (더 안전)
+// userinfo: 사용자 정보 표시용
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const FILE_NAME = 'planner-data.json'
 const TOKEN_KEY = 'planner-google-token'
