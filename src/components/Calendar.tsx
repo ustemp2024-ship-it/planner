@@ -28,6 +28,7 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
   const [showDatePicker, setShowDatePicker] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const monthColumnRef = useRef<HTMLDivElement>(null)
+  const dayHeaderRef = useRef<HTMLDivElement>(null)
   const monthRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
   const sortedCategories = useMemo(() => 
@@ -113,11 +114,14 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showDatePicker])
 
-  // Sync scrolling between month column and content area
+  // Sync scrolling between month column, day header and content area
   const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement
     if (monthColumnRef.current) {
       monthColumnRef.current.scrollTop = target.scrollTop
+    }
+    if (dayHeaderRef.current) {
+      dayHeaderRef.current.scrollLeft = target.scrollLeft
     }
   }
 
@@ -209,16 +213,37 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
         </div>
       )}
 
+      {/* Fixed Month/Day Header Row */}
+      <div className="flex h-8 border-b border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800 flex-shrink-0">
+        {/* Month/Day corner cell */}
+        <div className="w-24 h-8 flex-shrink-0 px-2 py-2 border-r border-slate-200/50 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-900">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">월 / 일</span>
+        </div>
+        
+        {/* Days header */}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide" ref={dayHeaderRef}>
+          <div className="min-w-max flex">
+            {DAYS.map((day) => (
+              <div
+                key={day}
+                className={`w-10 h-8 flex-shrink-0 py-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 
+                  ${day === todayDay && currentYear === new Date().getFullYear() ? 'bg-blue-100/95 dark:bg-blue-900/50' : 'bg-slate-50/95 dark:bg-slate-800/95'}`}
+              >
+                <span className={`text-xs font-semibold ${day === todayDay && currentYear === new Date().getFullYear() ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                  {day}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Calendar Grid with Independent Scrolling */}
       <div className="flex-1 overflow-hidden flex relative">
         {/* Fixed Month Column */}
         <div className="w-24 flex-shrink-0 overflow-y-auto overflow-x-hidden z-10 bg-white dark:bg-slate-900 shadow-md" 
              ref={monthColumnRef}
              onScroll={handleMonthScroll}>
-          {/* Empty corner cell */}
-          <div className="w-24 h-8 sticky top-0 z-20 flex-shrink-0 px-2 py-2 border-r border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-900">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">월 / 일</span>
-          </div>
           
           {/* Month labels */}
           {MONTHS.map((monthName, monthIndex) => {
@@ -258,25 +283,10 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
           })}
         </div>
 
-        {/* Right side with scrollable content and sticky days header */}
+        {/* Right side with scrollable content */}
         <div className="flex-1 overflow-auto" ref={scrollContainerRef}
              onScroll={handleContentScroll}>
             <div className="min-w-max">
-              {/* Sticky Days Header */}
-              <div className="sticky top-0 z-20 h-8 flex border-b border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800">
-                {DAYS.map((day) => (
-                  <div
-                    key={day}
-                    className={`w-10 h-8 flex-shrink-0 py-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 
-                      ${day === todayDay && currentYear === new Date().getFullYear() ? 'bg-blue-100/95 dark:bg-blue-900/50' : 'bg-slate-50/95 dark:bg-slate-800/95'}`}
-                  >
-                    <span className={`text-xs font-semibold ${day === todayDay && currentYear === new Date().getFullYear() ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>
-                      {day}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
               {/* Calendar Grid */}
               {MONTHS.map((_, monthIndex) => (
                 <div 
