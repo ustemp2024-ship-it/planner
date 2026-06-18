@@ -46,8 +46,28 @@ export function NotificationSettings({ isOpen, onClose }: NotificationSettingsPr
     onClose()
   }
 
-  const handleTestNotification = () => {
-    notificationManager.sendDailyBriefing(tasks)
+  const handleTestNotification = async () => {
+    // 다양한 테스트 알림 선택
+    const testType = Math.floor(Math.random() * 3)
+    
+    switch (testType) {
+      case 0:
+        await notificationManager.sendDailyBriefing(tasks)
+        break
+      case 1:
+        // 마감 임박 테스트 (랜덤 작업 선택)
+        const incompleteTasks = tasks.filter(t => !t.completed)
+        if (incompleteTasks.length > 0) {
+          const randomTask = incompleteTasks[Math.floor(Math.random() * incompleteTasks.length)]
+          await notificationManager.sendDeadlineReminder(randomTask)
+        } else {
+          await notificationManager.testPushNotification()
+        }
+        break
+      case 2:
+        await notificationManager.sendDailySummary(tasks)
+        break
+    }
   }
 
   if (!isOpen) return null

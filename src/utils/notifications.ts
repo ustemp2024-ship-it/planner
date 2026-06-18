@@ -4,17 +4,106 @@ import type { Task } from '../types'
 export class NotificationManager {
   private registration: ServiceWorkerRegistration | null = null
   private permission: NotificationPermission = 'default'
+  private pushSubscription: PushSubscription | null = null
 
-  // Service Worker 등록
+  // Service Worker 등록 및 Push 구독
   async register(): Promise<void> {
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
       try {
+        // Service Worker 등록
         this.registration = await navigator.serviceWorker.register('/service-worker.js')
         console.log('Service Worker registered:', this.registration)
+        
+        // Service Worker 활성화 대기
+        await navigator.serviceWorker.ready
+        
+        // Push 구독 확인 및 생성
+        await this.subscribeToPush()
+        
+        // IndexedDB 초기화
+        await this.initIndexedDB()
       } catch (error) {
         console.error('Service Worker registration failed:', error)
       }
     }
+  }
+  
+  // Push 알림 구독
+  private async subscribeToPush(): Promise<void> {
+    if (!this.registration) return
+    
+    try {
+      // 기존 구독 확인
+      this.pushSubscription = await this.registration.pushManager.getSubscription()
+      
+      if (!this.pushSubscription) {
+        // VAPID public key (실제 환경에서는 환경변수로 관리)
+        const vapidPublicKey = 'BNOJyTgwrEwK9lbetRcougxkRgLpPs1DX0YCfA5ZzXu4z9p_Et5EnW8vxxPMBIysOTlJ0cxecMAt54cI4yhwIKg'
+        
+        const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey)
+        
+        // 새 구독 생성
+        this.pushSubscription = await this.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey
+        })
+        
+        console.log('Push subscription created:', this.pushSubscription)
+        
+        // 서버에 구독 정보 전송 (백엔드 구현 필요)
+        await this.sendSubscriptionToServer(this.pushSubscription)
+      }
+    } catch (error) {
+      console.error('Failed to subscribe to push:', error)
+    }
+  }
+  
+  // Base64 URL을 Uint8Array로 변환
+  private urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4)
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/')
+    
+    const rawData = window.atob(base64)
+    const outputArray = new Uint8Array(rawData.length)
+    
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i)
+    }
+    
+    return outputArray
+  }
+  
+  // 서버에 구독 정보 전송
+  private async sendSubscriptionToServer(subscription: PushSubscription): Promise<void> {
+    // 백엔드 엔드포인트가 준비되면 구현
+    // const response = await fetch('/api/push-subscription', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(subscription)
+    // })
+    console.log('Push subscription would be sent to server:', subscription)
+  }
+  
+  // IndexedDB 초기화
+  private async initIndexedDB(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('PlannerDB', 1)
+      
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        console.log('IndexedDB initialized')
+        resolve()
+      }
+      
+      request.onupgradeneeded = (event: any) => {
+        const db = event.target.result
+        if (!db.objectStoreNames.contains('tasks')) {
+          db.createObjectStore('tasks', { keyPath: 'id' })
+        }
+      }
+    })
   }
 
   // 알림 권한 요청
@@ -68,6 +157,9 @@ export class NotificationManager {
     const todayTasks = tasks.filter(task => 
       task.startDate <= today && task.endDate >= today && !task.completed
     )
+    
+    // Service Worker에 작업 데이터 동기화
+    await this.syncTasksToServiceWorker(tasks)
 
     if (todayTasks.length === 0) {
       await this.sendNotification('📅 오늘의 일정', {
@@ -82,8 +174,23 @@ export class NotificationManager {
 
     await this.sendNotification('🌅 좋은 아침입니다!', {
       body: `오늘의 할 일 (${todayTasks.length}개)\n${taskList}${moreText}`,
-      tag: 'daily-briefing'
+      tag: 'daily-briefing',
+      requireInteraction: true,
+      actions: [
+        { action: 'open', title: '플래너 열기' },
+        { action: 'dismiss', title: '닫기' }
+      ]
     } as any)
+  }
+  
+  // Service Worker에 작업 동기화
+  private async syncTasksToServiceWorker(tasks: Task[]): Promise<void> {
+    if (!navigator.serviceWorker.controller) return
+    
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SYNC_TASKS',
+      tasks: tasks
+    })
   }
 
   // 마감 임박 알림
@@ -138,27 +245,71 @@ export class NotificationManager {
         console.log(`Periodic sync registered: ${tag}`)
       } catch (error) {
         console.error('Periodic sync registration failed:', error)
+        // Fallback to regular intervals
+        this.scheduleWithInterval(tag)
       }
     } else {
       console.log('Periodic Background Sync not supported')
-      // Fallback: use setTimeout for next day
-      this.scheduleWithTimeout(tag)
+      // Fallback: use setInterval
+      this.scheduleWithInterval(tag)
     }
   }
-
-  // Fallback scheduling with setTimeout
-  private scheduleWithTimeout(tag: string): void {
+  
+  // Fallback scheduling with setInterval
+  private scheduleWithInterval(tag: string): void {
+    const settings = this.getSettings()
+    
+    if (tag === 'daily-briefing' && settings.dailyBriefing) {
+      // 매일 지정된 시간에 실행
+      const [hours, minutes] = settings.dailyBriefingTime.split(':').map(Number)
+      this.scheduleDaily(hours, minutes, () => {
+        // @ts-ignore
+        this.sendDailyBriefing(window.useStore?.getState?.()?.tasks || [])
+      })
+    } else if (tag === 'daily-summary' && settings.dailySummary) {
+      const [hours, minutes] = settings.dailySummaryTime.split(':').map(Number)
+      this.scheduleDaily(hours, minutes, () => {
+        // @ts-ignore
+        this.sendDailySummary(window.useStore?.getState?.()?.tasks || [])
+      })
+    }
+  }
+  
+  // 매일 특정 시간에 실행
+  private scheduleDaily(hours: number, minutes: number, callback: () => void): void {
     const now = new Date()
-    const tomorrow = new Date(now)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(8, 0, 0, 0) // 내일 오전 8시
-
-    const timeUntilTomorrow = tomorrow.getTime() - now.getTime()
-
+    const scheduled = new Date()
+    scheduled.setHours(hours, minutes, 0, 0)
+    
+    // 이미 시간이 지났으면 내일로 설정
+    if (scheduled <= now) {
+      scheduled.setDate(scheduled.getDate() + 1)
+    }
+    
+    const timeout = scheduled.getTime() - now.getTime()
+    
     setTimeout(() => {
-      this.sendDailyBriefing([]) // Fetch tasks from store
-      this.scheduleWithTimeout(tag) // Reschedule for next day
-    }, timeUntilTomorrow)
+      callback()
+      // 24시간마다 반복
+      setInterval(callback, 24 * 60 * 60 * 1000)
+    }, timeout)
+  }
+
+  // Push 알림 테스트
+  async testPushNotification(): Promise<void> {
+    if (!this.pushSubscription) {
+      console.error('No push subscription available')
+      return
+    }
+    
+    // 테스트 알림 전송
+    await this.sendNotification('🧪 테스트 알림', {
+      body: '푸시 알림이 정상적으로 작동합니다!',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'test-notification',
+      requireInteraction: false
+    })
   }
 
   // 알림 설정 저장

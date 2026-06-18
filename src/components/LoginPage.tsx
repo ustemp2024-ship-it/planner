@@ -1,24 +1,53 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
+import { PermissionGuide } from './PermissionGuide'
 
 export const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { login } = useAuthStore()
+  const [rememberMe, setRememberMe] = useState(() => 
+    localStorage.getItem('planner-remember-me') === 'true'
+  )
+  const [showQuickLogin, setShowQuickLogin] = useState(false)
+  const [showPermissionGuide, setShowPermissionGuide] = useState(false)
+  const { login, lastLoginEmail } = useAuthStore()
 
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+  
+  useEffect(() => {
+    // 이전 로그인 정보가 있으면 빠른 로그인 표시
+    const savedEmail = localStorage.getItem('planner-auto-login')
+    if (savedEmail && rememberMe) {
+      setShowQuickLogin(true)
+      // 자동 로그인 시도
+      setTimeout(() => {
+        handleLogin(true)
+      }, 500)
+    }
+  }, [])
+  
+  const handleRememberMeChange = (checked: boolean) => {
+    setRememberMe(checked)
+    localStorage.setItem('planner-remember-me', checked.toString())
+    if (!checked) {
+      localStorage.removeItem('planner-auto-login')
+      setShowQuickLogin(false)
+    }
+  }
 
-  const handleLogin = async () => {
+  const handleLogin = async (silent = false) => {
     setIsLoading(true)
     setError(null)
     
     try {
       await login()
     } catch (e) {
-      const errorMessage = isSafari 
-        ? 'Safari에서 로그인 문제가 발생했습니다. Chrome 또는 Firefox 사용을 권장합니다.'
-        : '로그인에 실패했습니다. 다시 시도해주세요.'
-      setError(errorMessage)
+      if (!silent) {
+        const errorMessage = isSafari 
+          ? 'Safari에서 로그인 문제가 발생했습니다. Chrome 또는 Firefox 사용을 권장합니다.'
+          : '로그인에 실패했습니다. 다시 시도해주세요.'
+        setError(errorMessage)
+      }
       console.error('Login error:', e)
     } finally {
       setIsLoading(false)
@@ -39,7 +68,7 @@ export const LoginPage = () => {
               플래너
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
-              Google 계정으로 로그인하여 시작하세요
+              {showQuickLogin ? '다시 오신 것을 환영합니다!' : 'Google 계정으로 로그인하여 시작하세요'}
             </p>
           </div>
 
@@ -55,11 +84,40 @@ export const LoginPage = () => {
               </div>
             </div>
           )}
+          
+          {showQuickLogin && localStorage.getItem('planner-auto-login') && (
+            <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/20">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">빠른 로그인</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{localStorage.getItem('planner-auto-login')}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('planner-auto-login')
+                    setShowQuickLogin(false)
+                  }}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
-            onClick={handleLogin}
+            onClick={() => handleLogin(false)}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all shadow-lg border border-slate-200 dark:border-slate-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all shadow-lg border border-slate-200 dark:border-slate-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
@@ -84,14 +142,43 @@ export const LoginPage = () => {
               </svg>
             )}
             <span className="text-slate-700 dark:text-slate-200 font-semibold">
-              {isLoading ? '로그인 중...' : 'Google로 계속하기'}
+              {isLoading ? '로그인 중...' : showQuickLogin ? '계속 진행하기' : 'Google로 시작하기'}
             </span>
           </button>
+          
+          <div className="mt-4 flex items-center justify-center">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => handleRememberMeChange(e.target.checked)}
+                className="w-4 h-4 text-blue-500 rounded border-slate-300 dark:border-slate-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-slate-600 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
+                로그인 상태 유지
+              </span>
+            </label>
+          </div>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 space-y-2 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               로그인하면 일정과 할일이 Google Drive에 안전하게 동기화됩니다
             </p>
+            {rememberMe && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                다음 방문 시 자동으로 로그인됩니다
+              </p>
+            )}
+            
+            <button
+              onClick={() => setShowPermissionGuide(true)}
+              className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline transition-colors"
+            >
+              권한 안내 보기
+            </button>
           </div>
 
           {isSafari && (
@@ -111,12 +198,20 @@ export const LoginPage = () => {
 
         <div className="mt-6 text-center">
           <div className="flex items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
-            <span>✨ 자동 동기화</span>
-            <span>🔒 안전한 저장</span>
-            <span>📱 모든 기기에서 접근</span>
+            <span className="flex items-center gap-1">
+              <span className="text-lg">✨</span> 자동 동기화
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="text-lg">🔒</span> 안전한 저장
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="text-lg">📱</span> 모든 기기
+            </span>
           </div>
         </div>
       </div>
+      
+      <PermissionGuide isOpen={showPermissionGuide} onClose={() => setShowPermissionGuide(false)} />
     </div>
   )
 }

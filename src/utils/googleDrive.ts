@@ -1,3 +1,5 @@
+import { incrementalAuth, crossAccountSecurity, tokenSecurity } from './oauth-security'
+
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 // drive.file: 앱이 생성하거나 열었던 파일만 접근 (권한 최소화)
 // drive.appdata: 기존 appDataFolder 데이터 접근용
@@ -245,11 +247,27 @@ export const signIn = (): Promise<void> => {
       console.log('🔧 [SIGNIN] Client ID check:', CLIENT_ID ? 'Present' : 'Missing')
       console.log('🔧 [SIGNIN] Required scopes:', SCOPES)
 
-      // 모든 필요한 권한을 강제로 요청
-      const requestOptions = {
-        prompt: 'select_account consent', // 항상 권한 동의 화면 표시
+      // OAuth 요청 옵션 최적화
+      const savedEmail = localStorage.getItem('planner-auto-login')
+      const rememberMe = localStorage.getItem('planner-remember-me') === 'true'
+      
+      // prompt 옵션 설정: 이미 권한이 있고 remember me가 활성화되어 있으면 'none'으로 자동 로그인
+      let promptValue = 'select_account'
+      
+      if (rememberMe && savedEmail) {
+        // Remember Me가 활성화되어 있고 이전 로그인 정보가 있으면
+        promptValue = ''  // Silent auth 시도 (동의 화면 없이 로그인)
+      }
+      
+      const requestOptions: any = {
+        prompt: promptValue,
         enable_granular_consent: true,    // 세분화된 권한 동의 활성화
         include_granted_scopes: true      // 기존 승인된 범위 포함
+      }
+      
+      // 이전 로그인 이메일이 있으면 hint로 제공
+      if (savedEmail) {
+        requestOptions.login_hint = savedEmail
       }
 
       console.log('⚙️ [SIGNIN] Request options:', requestOptions)

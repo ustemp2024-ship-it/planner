@@ -13,23 +13,32 @@ interface AuthStore {
   user: User | null
   isAuthenticated: boolean
   isInitialized: boolean
+  isAutoLoginAttempted: boolean
+  lastLoginEmail: string | null
   
   initializeAuth: () => Promise<void>
   login: () => Promise<void>
   logout: () => void
+  setAutoLoginAttempted: (attempted: boolean) => void
 }
 
 const AUTH_STORE_VERSION = 2
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       isInitialized: false,
+      isAutoLoginAttempted: false,
+      lastLoginEmail: null,
 
       initializeAuth: async () => {
         try {
+          // 자동 로그인 설정 확인
+          const autoLogin = localStorage.getItem('planner-auto-login')
+          const rememberMe = localStorage.getItem('planner-remember-me') === 'true'
+          
           // 저장된 토큰 확인
           const token = localStorage.getItem('planner-google-token')
           if (token) {
@@ -43,12 +52,54 @@ export const useAuthStore = create<AuthStore>()(
                     user: userInfo,
                     isAuthenticated: true,
                     isInitialized: true,
+                    lastLoginEmail: userInfo.email,
                   })
                   return
                 }
               }
             } catch (e) {
               localStorage.removeItem('planner-google-token')
+            }
+          }
+          
+          // 자동 로그인 시도 (Remember Me가 활성화된 경우)
+          if (rememberMe && autoLogin && !get().isAutoLoginAttempted) {
+            set({ isAutoLoginAttempted: true })
+            
+            try {
+              // Silent login 시도
+              await initGoogleApi()
+              const tokenClient = (window as any).google?.accounts?.oauth2?.initTokenClient?.({
+                client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+                prompt: '', // Silent login
+                login_hint: autoLogin, // 이전 로그인 이메일 사용
+                callback: async (response: any) => {
+                  if (response.access_token) {
+                    localStorage.setItem('planner-google-token', JSON.stringify({
+                      ...response,
+                      expiresAt: Date.now() + (response.expires_in * 1000),
+                      timestamp: Date.now()
+                    }))
+                    
+                    const userInfo = await getUserInfo()
+                    if (userInfo) {
+                      set({
+                        user: userInfo,
+                        isAuthenticated: true,
+                        isInitialized: true,
+                        lastLoginEmail: userInfo.email,
+                      })
+                    }
+                  }
+                }
+              })
+              
+              if (tokenClient) {
+                tokenClient.requestAccessToken()
+              }
+            } catch (e) {
+              console.log('Silent login failed, user interaction required')
             }
           }
           
@@ -107,9 +158,15 @@ export const useAuthStore = create<AuthStore>()(
               }
             }
             
+            // Remember Me 옵션 저장
+            if (localStorage.getItem('planner-remember-me') === 'true') {
+              localStorage.setItem('planner-auto-login', userInfo.email)
+            }
+            
             set({
               user: userInfo,
               isAuthenticated: true,
+              lastLoginEmail: userInfo.email,
             })
           } else {
             throw new Error('Failed to get user info')
@@ -130,6 +187,12 @@ export const useAuthStore = create<AuthStore>()(
 
         // SECURITY: 토큰만 삭제, 플래너 데이터는 유지 (다음 로그인 시 Google Drive에서 로드)
         localStorage.removeItem('planner-google-token')
+        
+        // Remember Me 해제 시 자동 로그인 정보도 삭제
+        if (localStorage.getItem('planner-remember-me') !== 'true') {
+          localStorage.removeItem('planner-auto-login')
+        }
+        
         sessionStorage.clear() // 전체 세션 정리
 
         set({
@@ -137,6 +200,8 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: false,
         })
       },
+      
+      setAutoLoginAttempted: (attempted: boolean) => set({ isAutoLoginAttempted: attempted }),
     }),
     {
       name: 'auth-storage',

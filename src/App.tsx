@@ -16,6 +16,7 @@ import { ConflictNotification } from './components/ConflictNotification'
 import { useStore } from './store/useStore'
 import { useAuthStore } from './store/useAuthStore'
 import { useSmartSync } from './hooks/useSmartSync'
+import { notificationManager } from './utils/notifications'
 
 function App() {
   const [showCategoryManager, setShowCategoryManager] = useState(false)
@@ -73,6 +74,40 @@ function App() {
       loadUserData()
     }
   }, [isAuthenticated, loadUserData])
+  
+  // 알림 초기화 및 설정
+  useEffect(() => {
+    const initNotifications = async () => {
+      // Service Worker 등록
+      await notificationManager.register()
+      
+      const settings = notificationManager.getSettings()
+      if (settings.enabled) {
+        // 알림 스케줄 설정
+        if (settings.dailyBriefing) {
+          await notificationManager.scheduleNotification('daily-briefing')
+        }
+        if (settings.dailySummary) {
+          await notificationManager.scheduleNotification('daily-summary')
+        }
+        if (settings.deadlineReminder) {
+          await notificationManager.scheduleNotification('deadline-reminder')
+        }
+      }
+    }
+    
+    initNotifications().catch(console.error)
+  }, [])
+  
+  // 작업 데이터 Service Worker 동기화
+  useEffect(() => {
+    if (navigator.serviceWorker?.controller && tasks.length > 0) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SYNC_TASKS',
+        tasks: tasks
+      })
+    }
+  }, [tasks])
 
   useSmartSync(isSyncLoggedIn)
 
