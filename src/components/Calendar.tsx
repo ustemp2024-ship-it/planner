@@ -28,7 +28,6 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
   const [showDatePicker, setShowDatePicker] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const monthColumnRef = useRef<HTMLDivElement>(null)
-  const dayHeaderRef = useRef<HTMLDivElement>(null)
   const monthRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
   const sortedCategories = useMemo(() => 
@@ -114,14 +113,11 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showDatePicker])
 
-  // Sync scrolling between month column, day header, and content area
+  // Sync scrolling between month column and content area
   const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement
     if (monthColumnRef.current) {
       monthColumnRef.current.scrollTop = target.scrollTop
-    }
-    if (dayHeaderRef.current) {
-      dayHeaderRef.current.scrollLeft = target.scrollLeft
     }
   }
 
@@ -132,12 +128,6 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
     }
   }
 
-  const handleDayScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft = target.scrollLeft
-    }
-  }
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
@@ -268,31 +258,26 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
           })}
         </div>
 
-        {/* Right side with fixed days header and scrollable content */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Fixed Days Header */}
-          <div className="h-8 overflow-x-auto overflow-y-hidden flex-shrink-0 border-b border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800 scrollbar-hide"
-               ref={dayHeaderRef}
-               onScroll={handleDayScroll}>
-            <div className="min-w-max flex">
-              {DAYS.map((day) => (
-                <div
-                  key={day}
-                  className={`w-10 h-8 flex-shrink-0 py-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 
-                    ${day === todayDay && currentYear === new Date().getFullYear() ? 'bg-blue-100/95 dark:bg-blue-900/50' : 'bg-slate-50/95 dark:bg-slate-800/95'}`}
-                >
-                  <span className={`text-xs font-semibold ${day === todayDay && currentYear === new Date().getFullYear() ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>
-                    {day}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-auto" ref={scrollContainerRef}
-               onScroll={handleContentScroll}>
+        {/* Right side with scrollable content and sticky days header */}
+        <div className="flex-1 overflow-auto" ref={scrollContainerRef}
+             onScroll={handleContentScroll}>
             <div className="min-w-max">
+              {/* Sticky Days Header */}
+              <div className="sticky top-0 z-20 h-8 flex border-b border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800">
+                {DAYS.map((day) => (
+                  <div
+                    key={day}
+                    className={`w-10 h-8 flex-shrink-0 py-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 
+                      ${day === todayDay && currentYear === new Date().getFullYear() ? 'bg-blue-100/95 dark:bg-blue-900/50' : 'bg-slate-50/95 dark:bg-slate-800/95'}`}
+                  >
+                    <span className={`text-xs font-semibold ${day === todayDay && currentYear === new Date().getFullYear() ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                      {day}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Calendar Grid */}
               {MONTHS.map((_, monthIndex) => (
                 <div 
                   key={monthIndex} 
@@ -397,7 +382,6 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                 </div>
               )}
             </div>
-          </div>
         </div>
       </div>
 
