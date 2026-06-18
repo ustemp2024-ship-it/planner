@@ -1,7 +1,8 @@
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 // drive.file: 앱이 생성하거나 열었던 파일만 접근 (권한 최소화)
+// drive.appdata: 기존 appDataFolder 데이터 접근용
 // userinfo: 사용자 정보 표시용
-const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const FILE_NAME = 'planner-data.json'
 const TOKEN_KEY = 'planner-google-token'
 
@@ -456,19 +457,43 @@ const findFile = async (retryCount = 0): Promise<string | null> => {
   // CRITICAL 수정: 사전 검증 제거, 실제 API 호출에서 403 처리
   // 토큰 검증은 실제 API 호출에서 처리하여 403 자동 복구 활성화
 
-  const params = new URLSearchParams({
+  // 먼저 일반 드라이브에서 검색
+  let params = new URLSearchParams({
     spaces: 'drive',
     fields: 'files(id, name)',
     q: `name='${FILE_NAME}' and trashed=false`
   })
 
   try {
-    console.log('📂 Google Drive 파일 검색 중...')
-    const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+    console.log('📂 Google Drive (일반 폴더) 파일 검색 중...')
+    let response = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
       headers: {
         'Authorization': `Bearer ${currentToken}`
       }
     })
+    
+    // 일반 드라이브에서 못 찾으면 appDataFolder에서도 검색
+    if (response.ok) {
+      const data = await response.json()
+      if (!data.files || data.files.length === 0) {
+        console.log('📂 일반 폴더에 파일 없음. appDataFolder 검색 중...')
+        params = new URLSearchParams({
+          spaces: 'appDataFolder',
+          fields: 'files(id, name)',
+          q: `name='${FILE_NAME}'`
+        })
+        
+        response = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+          headers: {
+            'Authorization': `Bearer ${currentToken}`
+          }
+        })
+      } else {
+        // 일반 드라이브에서 찾음
+        console.log('✅ 일반 드라이브에서 파일 발견')
+        return data.files[0].id
+      }
+    }
 
     // 다양한 에러 상황 처리 - 403은 권한 부족으로 강제 리셋
     if (response.status === 401 || response.status === 403) {
@@ -504,7 +529,11 @@ const findFile = async (retryCount = 0): Promise<string | null> => {
     const files = data.files
     const result = files && files.length > 0 ? files[0].id : null
 
-    console.log(result ? '✅ 파일 찾기 성공' : 'ℹ️ 파일이 존재하지 않음 (첫 번째 업로드)')
+    if (result) {
+      console.log('✅ appDataFolder에서 파일 발견 - 기존 데이터 사용')
+    } else {
+      console.log('ℹ️ 파일이 존재하지 않음 (첫 번째 업로드)')
+    }
     return result
 
   } catch (error) {
