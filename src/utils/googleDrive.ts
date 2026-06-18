@@ -1,7 +1,7 @@
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-// drive.appdata: 앱 전용 숨김 폴더만 접근 (더 안전)
+// drive.file: 앱이 생성하거나 열었던 파일만 접근 (권한 최소화)
 // userinfo: 사용자 정보 표시용
-const SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const FILE_NAME = 'planner-data.json'
 const TOKEN_KEY = 'planner-google-token'
 
@@ -457,9 +457,9 @@ const findFile = async (retryCount = 0): Promise<string | null> => {
   // 토큰 검증은 실제 API 호출에서 처리하여 403 자동 복구 활성화
 
   const params = new URLSearchParams({
-    spaces: 'appDataFolder',
+    spaces: 'drive',
     fields: 'files(id, name)',
-    q: `name='${FILE_NAME}'`
+    q: `name='${FILE_NAME}' and trashed=false`
   })
 
   try {
@@ -546,7 +546,7 @@ export const uploadToDrive = async (data: SyncData, retryCount = 0): Promise<voi
     const metadata = {
       name: FILE_NAME,
       mimeType: 'application/json',
-      ...(fileId ? {} : { parents: ['appDataFolder'] }),
+      // parents를 지정하지 않으면 My Drive 루트에 저장
     }
 
     const form = new FormData()
