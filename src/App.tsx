@@ -15,7 +15,7 @@ import { EmptyState } from './components/EmptyState'
 import { ConflictNotification } from './components/ConflictNotification'
 import { useStore } from './store/useStore'
 import { useAuthStore } from './store/useAuthStore'
-import { useAutoSync } from './hooks/useAutoSync'
+import { useSmartSync } from './hooks/useSmartSync'
 
 function App() {
   const [showCategoryManager, setShowCategoryManager] = useState(false)
@@ -74,7 +74,7 @@ function App() {
     }
   }, [isAuthenticated, loadUserData])
 
-  useAutoSync(isSyncLoggedIn)
+  useSmartSync(isSyncLoggedIn)
 
   const completionRate = useMemo(() => {
     const completedCount = tasks.filter(t => t.completed).length

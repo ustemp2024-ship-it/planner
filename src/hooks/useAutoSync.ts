@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { isSignedIn } from '../utils/googleDrive'
 
-const DEBOUNCE_MS = 1000  // 1초로 단축
-const SYNC_INTERVAL_MS = 15000  // 15초로 단축
+const DEBOUNCE_MS = 3000  // 3초 - 변경 후 충분한 시간 대기
+const SYNC_INTERVAL_MS = 60000  // 60초 - 너무 자주 동기화하지 않음
 
 export function useAutoSync(isLoggedIn: boolean) {
   const { categories, tasks, syncToDrive, syncFromDrive, isSyncing } = useStore()

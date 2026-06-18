@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { Category, Task } from '../types'
 import { PRESET_COLORS } from '../types'
 import { uploadToDrive, downloadFromDrive, type SyncData } from '../utils/googleDrive'
+// import { syncManager } from '../utils/syncManager' // 나중에 사용할 예정
 
 interface PlannerStore {
   categories: Category[]
@@ -173,14 +174,14 @@ export const useStore = create<PlannerStore>()(
 
       addTask: (task) => {
         set({
-          tasks: [...get().tasks, { ...task, id: generateId() }],
+          tasks: [...get().tasks, { ...task, id: generateId(), updatedAt: new Date().toISOString() }],
         })
       },
 
       updateTask: (id, updates) => {
         set({
           tasks: get().tasks.map((t) =>
-            t.id === id ? { ...t, ...updates } : t
+            t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t
           ),
         })
       },

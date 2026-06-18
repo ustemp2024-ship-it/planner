@@ -3,6 +3,7 @@ export interface Category {
   name: string
   color: string
   order: number
+  updatedAt?: string
 }
 
 export interface Task {
@@ -14,6 +15,7 @@ export interface Task {
   endDate: string
   completed: boolean
   reminderDate?: string
+  updatedAt?: string
 }
 
 export const PRESET_COLORS = [
