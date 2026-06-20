@@ -1,14 +1,15 @@
 // Push Notification Manager
 import type { Task } from '../types'
+import { pushClient } from './push-client'
+import { iosInstaller } from './ios-installer'
 
 export class NotificationManager {
   private registration: ServiceWorkerRegistration | null = null
   private permission: NotificationPermission = 'default'
-  private pushSubscription: PushSubscription | null = null
 
   // Service Worker 등록 및 Push 구독
   async register(): Promise<void> {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
+    if ('serviceWorker' in navigator) {
       try {
         // Service Worker 등록
         this.registration = await navigator.serviceWorker.register('/service-worker.js')
@@ -17,73 +18,18 @@ export class NotificationManager {
         // Service Worker 활성화 대기
         await navigator.serviceWorker.ready
         
-        // Push 구독 확인 및 생성
-        await this.subscribeToPush()
-        
         // IndexedDB 초기화
         await this.initIndexedDB()
+        
+        // Push 구독 (자동으로 시도하지 않음 - 사용자가 설정에서 활성화해야 함)
+        const isSubscribed = await pushClient.isSubscribed()
+        if (isSubscribed) {
+          console.log('Already subscribed to push notifications')
+        }
       } catch (error) {
         console.error('Service Worker registration failed:', error)
       }
     }
-  }
-  
-  // Push 알림 구독
-  private async subscribeToPush(): Promise<void> {
-    if (!this.registration) return
-    
-    try {
-      // 기존 구독 확인
-      this.pushSubscription = await this.registration.pushManager.getSubscription()
-      
-      if (!this.pushSubscription) {
-        // VAPID public key (실제 환경에서는 환경변수로 관리)
-        const vapidPublicKey = 'BNOJyTgwrEwK9lbetRcougxkRgLpPs1DX0YCfA5ZzXu4z9p_Et5EnW8vxxPMBIysOTlJ0cxecMAt54cI4yhwIKg'
-        
-        const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey)
-        
-        // 새 구독 생성
-        this.pushSubscription = await this.registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedVapidKey
-        })
-        
-        console.log('Push subscription created:', this.pushSubscription)
-        
-        // 서버에 구독 정보 전송 (백엔드 구현 필요)
-        await this.sendSubscriptionToServer(this.pushSubscription)
-      }
-    } catch (error) {
-      console.error('Failed to subscribe to push:', error)
-    }
-  }
-  
-  // Base64 URL을 Uint8Array로 변환
-  private urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4)
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/')
-    
-    const rawData = window.atob(base64)
-    const outputArray = new Uint8Array(rawData.length)
-    
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i)
-    }
-    
-    return outputArray
-  }
-  
-  // 서버에 구독 정보 전송
-  private async sendSubscriptionToServer(subscription: PushSubscription): Promise<void> {
-    // 백엔드 엔드포인트가 준비되면 구현
-    // const response = await fetch('/api/push-subscription', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(subscription)
-    // })
-    console.log('Push subscription would be sent to server:', subscription)
   }
   
   // IndexedDB 초기화
@@ -108,15 +54,28 @@ export class NotificationManager {
 
   // 알림 권한 요청
   async requestPermission(): Promise<boolean> {
-    if (!('Notification' in window)) {
-      console.log('This browser does not support notifications')
+    if (!pushClient.isSupported()) {
+      console.log('Push notifications not supported on this device')
+      
+      // iOS 특별 처리
+      if (iosInstaller.isIOSDevice() && !iosInstaller.isAppInstalled()) {
+        console.log('Please install the app to home screen for notifications on iOS')
+      }
       return false
     }
 
     try {
-      this.permission = await Notification.requestPermission()
+      this.permission = await pushClient.requestPermission()
       console.log('Notification permission:', this.permission)
-      return this.permission === 'granted'
+      
+      // 권한이 승인되면 자동으로 push 구독
+      if (this.permission === 'granted') {
+        const settings = this.getSettings()
+        const subscribed = await pushClient.subscribe(settings)
+        return subscribed
+      }
+      
+      return false
     } catch (error) {
       console.error('Error requesting notification permission:', error)
       return false
@@ -297,19 +256,19 @@ export class NotificationManager {
 
   // Push 알림 테스트
   async testPushNotification(): Promise<void> {
-    if (!this.pushSubscription) {
-      console.error('No push subscription available')
-      return
-    }
+    // 서버를 통한 push 알림 테스트
+    const success = await pushClient.sendTestNotification()
     
-    // 테스트 알림 전송
-    await this.sendNotification('🧪 테스트 알림', {
-      body: '푸시 알림이 정상적으로 작동합니다!',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      tag: 'test-notification',
-      requireInteraction: false
-    })
+    if (!success) {
+      // 로컬 알림으로 fallback
+      await this.sendNotification('🧪 테스트 알림', {
+        body: '푸시 알림이 정상적으로 작동합니다!',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: 'test-notification',
+        requireInteraction: false
+      })
+    }
   }
 
   // 알림 설정 저장

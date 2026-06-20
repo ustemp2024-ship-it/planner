@@ -13,10 +13,12 @@ import { UserProfile } from './components/UserProfile'
 import { AuthDebug } from './components/AuthDebug'
 import { EmptyState } from './components/EmptyState'
 import { ConflictNotification } from './components/ConflictNotification'
+import { IOSInstallPrompt } from './components/IOSInstallPrompt'
 import { useStore } from './store/useStore'
 import { useAuthStore } from './store/useAuthStore'
 import { useSmartSync } from './hooks/useSmartSync'
 import { notificationManager } from './utils/notifications'
+import { pushClient } from './utils/push-client'
 
 function App() {
   const [showCategoryManager, setShowCategoryManager] = useState(false)
@@ -99,13 +101,19 @@ function App() {
     initNotifications().catch(console.error)
   }, [])
   
-  // 작업 데이터 Service Worker 동기화
+  // 작업 데이터 Service Worker 및 Push Server 동기화
   useEffect(() => {
+    // Service Worker 동기화
     if (navigator.serviceWorker?.controller && tasks.length > 0) {
       navigator.serviceWorker.controller.postMessage({
         type: 'SYNC_TASKS',
         tasks: tasks
       })
+    }
+    
+    // Push Server 동기화 (익명 기기용)
+    if (tasks.length > 0) {
+      pushClient.syncTasks(tasks).catch(console.error)
     }
   }, [tasks])
 
@@ -356,6 +364,8 @@ function App() {
         isVisible={hasConflicts} 
         onClose={clearConflicts} 
       />
+      
+      <IOSInstallPrompt />
     </div>
   )
 }

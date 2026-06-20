@@ -70,7 +70,9 @@ self.addEventListener('push', (event) => {
     badge: '/icon-192.png',
     vibrate: [200, 100, 200],
     tag: 'planner-notification',
-    data: {}
+    data: {},
+    requireInteraction: false,
+    silent: false
   };
 
   if (event.data) {
@@ -85,20 +87,30 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // iOS doesn't support notification actions in some versions
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const notificationOptions = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    tag: notificationData.tag,
+    data: notificationData.data,
+    requireInteraction: notificationData.requireInteraction,
+    silent: notificationData.silent
+  };
+
+  // Only add vibrate and actions for non-iOS devices
+  if (!isIOS) {
+    notificationOptions.vibrate = notificationData.vibrate;
+    notificationOptions.actions = [
+      { action: 'open', title: '플래너 열기', icon: '/icon-192.png' },
+      { action: 'dismiss', title: '닫기' }
+    ];
+  }
+
   const promiseChain = self.registration.showNotification(
     notificationData.title,
-    {
-      body: notificationData.body,
-      icon: notificationData.icon,
-      badge: notificationData.badge,
-      vibrate: notificationData.vibrate,
-      tag: notificationData.tag,
-      data: notificationData.data,
-      actions: [
-        { action: 'open', title: '플래너 열기', icon: '/icon-192.png' },
-        { action: 'dismiss', title: '닫기' }
-      ]
-    }
+    notificationOptions
   );
 
   event.waitUntil(promiseChain);
