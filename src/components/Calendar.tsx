@@ -282,13 +282,15 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
             
             // Calculate total height based on max tasks per category
             let categoryHeights = 28 // Month header height
+            const baseHeight = 28
             filteredCategories.forEach(category => {
               const maxTasks = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
-              const rowHeight = maxTasks > 1 ? Math.max(28, maxTasks * 20 + 8) : 28
+              // Minimum 1 row height even if no tasks
+              const rowHeight = Math.max(1, maxTasks) * baseHeight
               categoryHeights += rowHeight
             })
             if (filteredCategories.length === 0) {
-              categoryHeights += 28 // Empty row height
+              categoryHeights += baseHeight // Empty row height
             }
             const monthHeight = categoryHeights
             
@@ -304,7 +306,9 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                 </div>
                 {filteredCategories.map((category) => {
                   const maxTasks = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
-                  const rowHeight = maxTasks > 1 ? Math.max(28, maxTasks * 20 + 8) : 28
+                  const baseHeight = 28
+                  // Minimum 1 row height even if no tasks
+                  const rowHeight = Math.max(1, maxTasks) * baseHeight
                   
                   return (
                     <div key={`${monthIndex}-${category.id}-label`}
@@ -376,7 +380,9 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                     .filter(c => getCategoriesForMonth[monthIndex]?.includes(c.id))
                     .map((category) => {
                       const maxTasksForRow = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
-                      const rowHeight = maxTasksForRow > 1 ? Math.max(28, maxTasksForRow * 20 + 8) : 28
+                      const baseHeight = 28
+                      // Minimum 1 row height even if no tasks
+                      const rowHeight = Math.max(1, maxTasksForRow) * baseHeight
                       
                       return (
                         <div key={`${monthIndex}-${category.id}`} className="flex">
