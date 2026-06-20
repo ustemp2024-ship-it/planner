@@ -244,19 +244,19 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
       )}
 
       {/* Fixed Month/Day Header Row */}
-      <div className="flex h-7 border-b border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800 flex-shrink-0">
-        {/* Month/Day corner cell - dynamic height to match content */}
-        <div className="w-24 h-7 flex-shrink-0 px-2 py-1 border-r border-slate-200/50 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-900">
+      <div className="flex border-b border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800 flex-shrink-0">
+        {/* Month/Day corner cell - removed fixed height, will be handled inline */}
+        <div className="w-24 flex-shrink-0 px-2 py-1 border-r border-slate-200/50 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-900 flex items-start">
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">월 / 일</span>
         </div>
         
         {/* Days header */}
         <div className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide" ref={dayHeaderRef}>
-          <div className="min-w-max flex">
+          <div className="min-w-max flex h-7">
             {DAYS.map((day) => (
               <div
                 key={day}
-                className={`w-10 h-7 flex-shrink-0 py-1 text-center border-r border-slate-200/50 dark:border-slate-700/50 
+                className={`w-10 flex-shrink-0 py-1 text-center border-r border-slate-200/50 dark:border-slate-700/50 
                   ${day === todayDay && currentYear === new Date().getFullYear() ? 'bg-blue-100/95 dark:bg-blue-900/50' : 'bg-slate-50/95 dark:bg-slate-800/95'}`}
               >
                 <span className={`text-xs font-semibold ${day === todayDay && currentYear === new Date().getFullYear() ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>
@@ -307,19 +307,22 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                   // Minimum 1 row height even if no tasks
                   const numberOfRows = Math.max(1, maxTasks)
                   
-                  // 작업 수만큼 카테고리 라벨 셀 생성 (1:1 대응)
-                  return Array.from({ length: numberOfRows }, (_, rowIndex) => (
-                    <div key={`${monthIndex}-${category.id}-label-${rowIndex}`}
-                      className="w-24 h-7 flex-shrink-0 px-2 py-0.5 border-r border-b border-slate-200/50 dark:border-slate-700/50 flex items-center gap-1.5 transition-colors"
-                      style={{ backgroundColor: `${category.color}15` }}
+                  // 병합된 카테고리 라벨 셀 (상단 정렬)
+                  return (
+                    <div key={`${monthIndex}-${category.id}-label`}
+                      className="w-24 flex-shrink-0 px-2 py-1 border-r border-b border-slate-200/50 dark:border-slate-700/50 flex items-start gap-1.5 transition-colors"
+                      style={{ 
+                        backgroundColor: `${category.color}15`,
+                        height: `${numberOfRows * 28}px`
+                      }}
                     >
                       <div
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm mt-0.5"
                         style={{ backgroundColor: category.color }}
                       />
                       <span className="text-xs font-medium truncate text-slate-700 dark:text-slate-200">{category.name}</span>
                     </div>
-                  ))
+                  )
                 })}
                 {filteredCategories.length === 0 && (
                   <div className="w-24 h-7 flex-shrink-0 p-1 border-r border-b border-slate-200/50 dark:border-slate-700/50 text-xs text-slate-400">
