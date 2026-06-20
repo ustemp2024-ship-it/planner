@@ -64,7 +64,7 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
 
   return (
     <div
-      className={`border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-start relative gap-0 ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
+      className={`border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-start relative ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
       style={{ height: `${cellHeight}px` }}
       onClick={handleClick}
       onDragOver={(e) => {
@@ -80,25 +80,7 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
         }
       }}
     >
-      {/* Fill empty rows if tasks are less than maxTasks */}
-      {Array.from({ length: effectiveMaxTasks }, (_, rowIndex) => {
-        const task = cellTasks[rowIndex]
-        if (!task) {
-          // Empty row
-          return (
-            <div
-              key={`empty-${rowIndex}`}
-              className={`w-full ${rowIndex < effectiveMaxTasks - 1 ? 'border-b border-slate-200/30 dark:border-slate-700/30' : ''}`}
-              style={{ height: `${baseHeight}px` }}
-              onClick={(e) => {
-                e.stopPropagation()
-                onAddTask(category.id, date)
-              }}
-            />
-          )
-        }
-        
-        // Task row
+      {cellTasks.map((task) => {
         const isStart = task.startDate === date
         const isEnd = task.endDate === date
         const isSingleDay = task.startDate === task.endDate
@@ -139,12 +121,10 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
               ${task.completed ? 'shadow-inner' : 'hover:brightness-95'}
               ${isStart && !isSingleDay ? 'rounded-l-sm' : ''}
               ${isEnd && !isSingleDay ? 'rounded-r-sm' : ''}
-              w-full
-              ${rowIndex < effectiveMaxTasks - 1 ? 'border-b border-slate-200/30 dark:border-slate-700/30' : ''}
+              ${effectiveMaxTasks > 1 ? 'h-7 w-full' : 'h-full w-full'}
               ${selectionMode && selectedTasks.has(task.id) ? 'ring-2 ring-red-500 ring-inset' : ''}
             `}
             style={{
-              height: `${baseHeight}px`,
               backgroundColor: task.completed 
                 ? category.color 
                 : `${category.color}50`,
