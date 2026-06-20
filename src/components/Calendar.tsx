@@ -308,21 +308,32 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                   const maxTasks = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
                   const baseHeight = 28
                   // Minimum 1 row height even if no tasks
-                  const rowHeight = Math.max(1, maxTasks) * baseHeight
+                  const numberOfRows = Math.max(1, maxTasks)
+                  const rowHeight = numberOfRows * baseHeight
                   
                   return (
                     <div key={`${monthIndex}-${category.id}-label`}
-                      className="w-24 flex-shrink-0 px-2 py-0.5 border-r border-b border-slate-200/50 dark:border-slate-700/50 flex items-center gap-1.5 transition-colors"
+                      className="w-24 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50 transition-colors flex flex-col"
                       style={{ 
                         backgroundColor: `${category.color}15`,
                         height: `${rowHeight}px`
                       }}
                     >
-                      <div
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <span className="text-xs font-medium truncate text-slate-700 dark:text-slate-200">{category.name}</span>
+                      {Array.from({ length: numberOfRows }, (_, index) => (
+                        <div 
+                          key={`${monthIndex}-${category.id}-row-${index}`}
+                          className={`flex items-center gap-1.5 px-2 flex-1 ${index < numberOfRows - 1 ? 'border-b border-slate-200/30 dark:border-slate-700/30' : ''}`}
+                          style={{ height: `${baseHeight}px` }}
+                        >
+                          <div
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="text-xs font-medium truncate text-slate-700 dark:text-slate-200">
+                            {category.name}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   )
                 })}
