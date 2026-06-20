@@ -119,7 +119,7 @@ export class PushClient {
         // Create new subscription
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: convertedVapidKey
+          applicationServerKey: convertedVapidKey as BufferSource
         })
         console.log('Push subscription created:', subscription)
       }

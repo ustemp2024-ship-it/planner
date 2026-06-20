@@ -16,9 +16,10 @@ interface TaskCellProps {
   onDragStart?: (taskId: string | null) => void
   onDragEnd?: () => void
   onDropTask?: (taskId: string, newDate: string, newCategoryId: string) => void
+  maxTasks?: number
 }
 
-export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask, selectionMode = false, selectedTasks = new Set(), onToggleSelection, draggedTaskId, onDragStart, onDragEnd, onDropTask }: TaskCellProps) {
+export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTask, onEditTask, selectionMode = false, selectedTasks = new Set(), onToggleSelection, draggedTaskId, onDragStart, onDragEnd, onDropTask, maxTasks = 0 }: TaskCellProps) {
   const { toggleTaskComplete } = useStore()
   const [isDragOver, setIsDragOver] = useState(false)
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
@@ -54,13 +55,15 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
   }
 
   const taskCount = cellTasks.length
-
-  const cellHeight = taskCount > 1 ? `${taskCount * 20}px` : '24px'
+  
+  // Use maxTasks if provided for consistent height across the row
+  const effectiveMaxTasks = maxTasks > 0 ? maxTasks : taskCount
+  const cellHeight = effectiveMaxTasks > 1 ? Math.max(28, effectiveMaxTasks * 20 + 8) : 28
 
   return (
     <div
-      className={`min-h-[24px] border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-center relative ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
-      style={{ height: cellHeight }}
+      className={`border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-center relative ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
+      style={{ height: `${cellHeight}px` }}
       onClick={handleClick}
       onDragOver={(e) => {
         e.preventDefault()

@@ -39,6 +39,48 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
     [categories, hiddenCategories]
   )
 
+  // Calculate max tasks per category per month for consistent row heights
+  const getMaxTasksPerCategoryMonth = useMemo(() => {
+    const maxTasks: Record<string, number> = {}
+    
+    for (let month = 0; month < 12; month++) {
+      sortedCategories.forEach(category => {
+        const key = `${month}-${category.id}`
+        let max = 0
+        
+        for (let day = 1; day <= 31; day++) {
+          if (!isValidDay(month, day)) continue
+          
+          const dateStr = getDateString(month, day)
+          const dayTasks = tasks.filter(t => 
+            t.categoryId === category.id &&
+            t.startDate <= dateStr && 
+            t.endDate >= dateStr
+          )
+          max = Math.max(max, dayTasks.length)
+        }
+        
+        maxTasks[key] = max
+      })
+    }
+    
+    return maxTasks
+  }, [tasks, sortedCategories, currentYear])
+  
+  const isValidDay = (month: number, day: number) => {
+    return day <= getDaysInMonth(month)
+  }
+  
+  const getDateString = (month: number, day: number) => {
+    const m = String(month + 1).padStart(2, '0')
+    const d = String(day).padStart(2, '0')
+    return `${currentYear}-${m}-${d}`
+  }
+  
+  const getDaysInMonth = (month: number) => {
+    return new Date(currentYear, month + 1, 0).getDate()
+  }
+
   const getCategoriesForMonth = useMemo(() => {
     const monthCategories: Record<number, string[]> = {}
     for (let month = 0; month < 12; month++) {
@@ -56,19 +98,6 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
     return monthCategories
   }, [tasks, currentYear])
 
-  const getDateString = (month: number, day: number) => {
-    const m = String(month + 1).padStart(2, '0')
-    const d = String(day).padStart(2, '0')
-    return `${currentYear}-${m}-${d}`
-  }
-
-  const getDaysInMonth = (month: number) => {
-    return new Date(currentYear, month + 1, 0).getDate()
-  }
-
-  const isValidDay = (month: number, day: number) => {
-    return day <= getDaysInMonth(month)
-  }
 
   const todayString = new Date().toISOString().split('T')[0]
   const todayMonth = new Date().getMonth()
@@ -250,7 +279,18 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
           {MONTHS.map((monthName, monthIndex) => {
             const monthCategories = getCategoriesForMonth[monthIndex] || []
             const filteredCategories = sortedCategories.filter(c => monthCategories.includes(c.id))
-            const monthHeight = Math.max(1, filteredCategories.length) * 28 + 28 // 28px per row
+            
+            // Calculate total height based on max tasks per category
+            let categoryHeights = 28 // Month header height
+            filteredCategories.forEach(category => {
+              const maxTasks = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
+              const rowHeight = maxTasks > 1 ? Math.max(28, maxTasks * 20 + 8) : 28
+              categoryHeights += rowHeight
+            })
+            if (filteredCategories.length === 0) {
+              categoryHeights += 28 // Empty row height
+            }
+            const monthHeight = categoryHeights
             
             return (
               <div key={monthIndex} style={{ height: `${monthHeight}px` }} data-month={monthIndex}>
@@ -262,18 +302,26 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                     {monthName}
                   </span>
                 </div>
-                {filteredCategories.map((category) => (
-                  <div key={`${monthIndex}-${category.id}-label`}
-                    className="w-24 h-7 flex-shrink-0 px-2 py-0.5 border-r border-b border-slate-200/50 dark:border-slate-700/50 flex items-center gap-1.5 transition-colors"
-                    style={{ backgroundColor: `${category.color}15` }}
-                  >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span className="text-xs font-medium truncate text-slate-700 dark:text-slate-200">{category.name}</span>
-                  </div>
-                ))}
+                {filteredCategories.map((category) => {
+                  const maxTasks = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
+                  const rowHeight = maxTasks > 1 ? Math.max(28, maxTasks * 20 + 8) : 28
+                  
+                  return (
+                    <div key={`${monthIndex}-${category.id}-label`}
+                      className="w-24 flex-shrink-0 px-2 py-0.5 border-r border-b border-slate-200/50 dark:border-slate-700/50 flex items-center gap-1.5 transition-colors"
+                      style={{ 
+                        backgroundColor: `${category.color}15`,
+                        height: `${rowHeight}px`
+                      }}
+                    >
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: category.color }}
+                      />
+                      <span className="text-xs font-medium truncate text-slate-700 dark:text-slate-200">{category.name}</span>
+                    </div>
+                  )
+                })}
                 {filteredCategories.length === 0 && (
                   <div className="w-24 h-7 flex-shrink-0 p-1 border-r border-b border-slate-200/50 dark:border-slate-700/50 text-xs text-slate-400">
                     -
@@ -326,47 +374,54 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                   {/* Category rows */}
                   {sortedCategories
                     .filter(c => getCategoriesForMonth[monthIndex]?.includes(c.id))
-                    .map((category) => (
-                    <div key={`${monthIndex}-${category.id}`} className="flex">
-                      {DAYS.map((day) => {
-                        const isValid = isValidDay(monthIndex, day)
-                        if (!isValid) {
-                          return (
-                            <div
-                              key={day}
-                              className="w-10 h-7 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-200/60 dark:bg-slate-800/60"
-                            />
-                          )
-                        }
-                        const dateStr = getDateString(monthIndex, day)
-                        return (
-                          <div key={day} className="w-10 flex-shrink-0">
-                            <TaskCell
-                              date={dateStr}
-                              category={category}
-                              tasks={tasks.filter((t) => t.categoryId === category.id)}
-                              onAddTask={(categoryId, d) => setTaskModal({ isOpen: true, categoryId, date: d })}
-                              onEditTask={(task) => setTaskModal({ isOpen: true, task })}
-                              selectionMode={selectionMode}
-                              selectedTasks={selectedTasks}
-                              onToggleSelection={onToggleSelection}
-                              draggedTaskId={draggedTaskId}
-                              onDragStart={onDragStart}
-                              onDragEnd={onDragEnd}
-                              onDropTask={(taskId, newDate, newCategoryId) => {
-                                const task = tasks.find(t => t.id === taskId)
-                                if (task) {
-                                  const duration = new Date(task.endDate).getTime() - new Date(task.startDate).getTime()
-                                  const newEndDate = new Date(new Date(newDate).getTime() + duration).toISOString().split('T')[0]
-                                  copyTask(taskId, newDate, newEndDate, newCategoryId)
-                                }
-                              }}
-                            />
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ))}
+                    .map((category) => {
+                      const maxTasksForRow = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
+                      const rowHeight = maxTasksForRow > 1 ? Math.max(28, maxTasksForRow * 20 + 8) : 28
+                      
+                      return (
+                        <div key={`${monthIndex}-${category.id}`} className="flex">
+                          {DAYS.map((day) => {
+                            const isValid = isValidDay(monthIndex, day)
+                            if (!isValid) {
+                              return (
+                                <div
+                                  key={day}
+                                  className="w-10 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-200/60 dark:bg-slate-800/60"
+                                  style={{ height: `${rowHeight}px` }}
+                                />
+                              )
+                            }
+                            const dateStr = getDateString(monthIndex, day)
+                            return (
+                              <div key={day} className="w-10 flex-shrink-0">
+                                <TaskCell
+                                  date={dateStr}
+                                  category={category}
+                                  tasks={tasks.filter((t) => t.categoryId === category.id)}
+                                  maxTasks={maxTasksForRow}
+                                  onAddTask={(categoryId, d) => setTaskModal({ isOpen: true, categoryId, date: d })}
+                                  onEditTask={(task) => setTaskModal({ isOpen: true, task })}
+                                  selectionMode={selectionMode}
+                                  selectedTasks={selectedTasks}
+                                  onToggleSelection={onToggleSelection}
+                                  draggedTaskId={draggedTaskId}
+                                  onDragStart={onDragStart}
+                                  onDragEnd={onDragEnd}
+                                  onDropTask={(taskId, newDate, newCategoryId) => {
+                                    const task = tasks.find(t => t.id === taskId)
+                                    if (task) {
+                                      const duration = new Date(task.endDate).getTime() - new Date(task.startDate).getTime()
+                                      const newEndDate = new Date(new Date(newDate).getTime() + duration).toISOString().split('T')[0]
+                                      copyTask(taskId, newDate, newEndDate, newCategoryId)
+                                    }
+                                  }}
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
 
                   {(!getCategoriesForMonth[monthIndex] || getCategoriesForMonth[monthIndex].length === 0) && (
                     <div className="flex">
