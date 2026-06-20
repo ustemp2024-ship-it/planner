@@ -281,18 +281,15 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
             const filteredCategories = sortedCategories.filter(c => monthCategories.includes(c.id))
             
             // Calculate total height based on max tasks per category
-            let categoryHeights = 28 // Month header height
-            const baseHeight = 28
+            let totalRows = 1 // Month header
             filteredCategories.forEach(category => {
               const maxTasks = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
-              // Minimum 1 row height even if no tasks
-              const rowHeight = Math.max(1, maxTasks) * baseHeight
-              categoryHeights += rowHeight
+              totalRows += Math.max(1, maxTasks) // Each category adds rows equal to its max tasks
             })
             if (filteredCategories.length === 0) {
-              categoryHeights += baseHeight // Empty row height
+              totalRows += 1 // Empty row
             }
-            const monthHeight = categoryHeights
+            const monthHeight = totalRows * 28 // Each row is 28px
             
             return (
               <div key={monthIndex} style={{ height: `${monthHeight}px` }} data-month={monthIndex}>
@@ -309,36 +306,20 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                   const baseHeight = 28
                   // Minimum 1 row height even if no tasks
                   const numberOfRows = Math.max(1, maxTasks)
-                  const rowHeight = numberOfRows * baseHeight
                   
-                  return (
-                    <div key={`${monthIndex}-${category.id}-label`}
-                      className="w-24 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50 transition-colors flex flex-col"
-                      style={{ 
-                        backgroundColor: `${category.color}15`,
-                        height: `${rowHeight}px`
-                      }}
+                  // 작업 수만큼 카테고리 라벨 셀 생성 (1:1 대응)
+                  return Array.from({ length: numberOfRows }, (_, rowIndex) => (
+                    <div key={`${monthIndex}-${category.id}-label-${rowIndex}`}
+                      className="w-24 h-7 flex-shrink-0 px-2 py-0.5 border-r border-b border-slate-200/50 dark:border-slate-700/50 flex items-center gap-1.5 transition-colors"
+                      style={{ backgroundColor: `${category.color}15` }}
                     >
                       <div
-                        className="w-full h-full flex flex-col items-center justify-center px-2 py-0.5"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <div
-                            className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span className="text-xs font-medium truncate text-slate-700 dark:text-slate-200">
-                            {category.name}
-                          </span>
-                        </div>
-                        {numberOfRows > 1 && (
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            ({maxTasks}개 작업)
-                          </span>
-                        )}
-                      </div>
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: category.color }}
+                      />
+                      <span className="text-xs font-medium truncate text-slate-700 dark:text-slate-200">{category.name}</span>
                     </div>
-                  )
+                  ))
                 })}
                 {filteredCategories.length === 0 && (
                   <div className="w-24 h-7 flex-shrink-0 p-1 border-r border-b border-slate-200/50 dark:border-slate-700/50 text-xs text-slate-400">
@@ -394,53 +375,64 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                     .filter(c => getCategoriesForMonth[monthIndex]?.includes(c.id))
                     .map((category) => {
                       const maxTasksForRow = getMaxTasksPerCategoryMonth[`${monthIndex}-${category.id}`] || 0
-                      const baseHeight = 28
-                      // Minimum 1 row height even if no tasks
-                      const rowHeight = Math.max(1, maxTasksForRow) * baseHeight
+                      const numberOfRows = Math.max(1, maxTasksForRow)
                       
-                      return (
-                        <div key={`${monthIndex}-${category.id}`} className="flex">
+                      // Create individual rows for each task slot
+                      return Array.from({ length: numberOfRows }, (_, rowIndex) => (
+                        <div key={`${monthIndex}-${category.id}-row-${rowIndex}`} className="flex">
                           {DAYS.map((day) => {
                             const isValid = isValidDay(monthIndex, day)
                             if (!isValid) {
                               return (
                                 <div
                                   key={day}
-                                  className="w-10 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-200/60 dark:bg-slate-800/60"
-                                  style={{ height: `${rowHeight}px` }}
+                                  className="w-10 h-7 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-200/60 dark:bg-slate-800/60"
                                 />
                               )
                             }
                             const dateStr = getDateString(monthIndex, day)
+                            const dayTasks = tasks.filter(t => 
+                              t.categoryId === category.id &&
+                              t.startDate <= dateStr && 
+                              t.endDate >= dateStr
+                            )
+                            const task = dayTasks[rowIndex] // Get specific task for this row
+                            
                             return (
-                              <div key={day} className="w-10 flex-shrink-0">
-                                <TaskCell
-                                  date={dateStr}
-                                  category={category}
-                                  tasks={tasks.filter((t) => t.categoryId === category.id)}
-                                  maxTasks={maxTasksForRow}
-                                  onAddTask={(categoryId, d) => setTaskModal({ isOpen: true, categoryId, date: d })}
-                                  onEditTask={(task) => setTaskModal({ isOpen: true, task })}
-                                  selectionMode={selectionMode}
-                                  selectedTasks={selectedTasks}
-                                  onToggleSelection={onToggleSelection}
-                                  draggedTaskId={draggedTaskId}
-                                  onDragStart={onDragStart}
-                                  onDragEnd={onDragEnd}
-                                  onDropTask={(taskId, newDate, newCategoryId) => {
-                                    const task = tasks.find(t => t.id === taskId)
-                                    if (task) {
-                                      const duration = new Date(task.endDate).getTime() - new Date(task.startDate).getTime()
-                                      const newEndDate = new Date(new Date(newDate).getTime() + duration).toISOString().split('T')[0]
-                                      copyTask(taskId, newDate, newEndDate, newCategoryId)
-                                    }
-                                  }}
-                                />
+                              <div key={day} className="w-10 h-7 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50">
+                                {task ? (
+                                  <TaskCell
+                                    date={dateStr}
+                                    category={category}
+                                    tasks={[task]} // Pass only the specific task for this row
+                                    onAddTask={(categoryId, d) => setTaskModal({ isOpen: true, categoryId, date: d })}
+                                    onEditTask={(task) => setTaskModal({ isOpen: true, task })}
+                                    selectionMode={selectionMode}
+                                    selectedTasks={selectedTasks}
+                                    onToggleSelection={onToggleSelection}
+                                    draggedTaskId={draggedTaskId}
+                                    onDragStart={onDragStart}
+                                    onDragEnd={onDragEnd}
+                                    onDropTask={(taskId, newDate, newCategoryId) => {
+                                      const task = tasks.find(t => t.id === taskId)
+                                      if (task) {
+                                        const duration = new Date(task.endDate).getTime() - new Date(task.startDate).getTime()
+                                        const newEndDate = new Date(new Date(newDate).getTime() + duration).toISOString().split('T')[0]
+                                        copyTask(taskId, newDate, newEndDate, newCategoryId)
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <div 
+                                    className="w-full h-full cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                    onClick={() => setTaskModal({ isOpen: true, categoryId: category.id, date: dateStr })}
+                                  />
+                                )}
                               </div>
                             )
                           })}
                         </div>
-                      )
+                      ))
                     })}
 
                   {(!getCategoriesForMonth[monthIndex] || getCategoriesForMonth[monthIndex].length === 0) && (
@@ -450,7 +442,7 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                           key={day}
                           className="w-10 h-7 flex-shrink-0 border-r border-b border-slate-200/50 dark:border-slate-700/50"
                         />
-                      ))}
+                      ))
                     </div>
                   )}
                 </div>

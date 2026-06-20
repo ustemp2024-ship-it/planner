@@ -56,16 +56,12 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
 
   const taskCount = cellTasks.length
   
-  // Use maxTasks if provided for consistent height across the row
-  const effectiveMaxTasks = maxTasks > 0 ? maxTasks : taskCount
-  const baseHeight = 28
-  // Minimum 1 row height even if no tasks
-  const cellHeight = Math.max(1, effectiveMaxTasks) * baseHeight
+  // Simple height calculation for 1:1 correspondence
+  const cellHeight = taskCount > 0 ? taskCount * 28 : 28
 
   return (
     <div
-      className={`border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-start relative gap-0.5 ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
-      style={{ height: `${cellHeight}px` }}
+      className={`w-full h-full cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-center relative ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
       onClick={handleClick}
       onDragOver={(e) => {
         e.preventDefault()
@@ -125,7 +121,7 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
               ${selectionMode && selectedTasks.has(task.id) ? 'ring-2 ring-red-500 ring-inset' : ''}
             `}
             style={{
-              height: taskCount > 1 ? `${100 / taskCount}%` : '100%',
+              height: '100%',
               backgroundColor: task.completed 
                 ? category.color 
                 : `${category.color}50`,
