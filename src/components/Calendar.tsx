@@ -319,12 +319,10 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                         height: `${rowHeight}px`
                       }}
                     >
-                      {Array.from({ length: numberOfRows }, (_, index) => (
-                        <div 
-                          key={`${monthIndex}-${category.id}-row-${index}`}
-                          className={`flex items-center gap-1.5 px-2 flex-1 ${index < numberOfRows - 1 ? 'border-b border-slate-200/30 dark:border-slate-700/30' : ''}`}
-                          style={{ height: `${baseHeight}px` }}
-                        >
+                      <div
+                        className="w-full h-full flex flex-col items-center justify-center px-2 py-0.5"
+                      >
+                        <div className="flex items-center gap-1.5">
                           <div
                             className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
                             style={{ backgroundColor: category.color }}
@@ -333,7 +331,12 @@ export function Calendar({ selectionMode = false, selectedTasks = new Set(), onT
                             {category.name}
                           </span>
                         </div>
-                      ))}
+                        {numberOfRows > 1 && (
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            ({maxTasks}개 작업)
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}

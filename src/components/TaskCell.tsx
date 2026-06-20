@@ -64,7 +64,7 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
 
   return (
     <div
-      className={`border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-start relative ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
+      className={`border-r border-b border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col items-stretch justify-start relative gap-0.5 ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-400 ring-inset' : ''}`}
       style={{ height: `${cellHeight}px` }}
       onClick={handleClick}
       onDragOver={(e) => {
@@ -121,10 +121,11 @@ export const TaskCell = memo(function TaskCell({ date, category, tasks, onAddTas
               ${task.completed ? 'shadow-inner' : 'hover:brightness-95'}
               ${isStart && !isSingleDay ? 'rounded-l-sm' : ''}
               ${isEnd && !isSingleDay ? 'rounded-r-sm' : ''}
-              ${effectiveMaxTasks > 1 ? 'h-7 w-full' : 'h-full w-full'}
+              w-full
               ${selectionMode && selectedTasks.has(task.id) ? 'ring-2 ring-red-500 ring-inset' : ''}
             `}
             style={{
+              height: taskCount > 1 ? `${100 / taskCount}%` : '100%',
               backgroundColor: task.completed 
                 ? category.color 
                 : `${category.color}50`,
